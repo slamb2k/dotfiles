@@ -154,3 +154,21 @@ export XDG_CONFIG_HOME="/Users/omerxx/.config"
 eval "$(zoxide init zsh)"
 eval "$(atuin init zsh)"
 eval "$(direnv hook zsh)"
+
+# -----------------------------------------------------------------------------
+# Dotfiles drift check — runs once per day on shell startup. Silent when clean,
+# prints a one-line summary when something's installed but not yet tracked in
+# the repo. Full report:  ~/dotfiles/check-drift.sh
+# -----------------------------------------------------------------------------
+__dotfiles_drift_check() {
+    local script=$HOME/dotfiles/check-drift.sh
+    local marker=$HOME/.cache/dotfiles-drift-checked
+    [[ -x $script ]] || return
+    mkdir -p "${marker%/*}"
+    if [[ ! -f $marker ]] || [[ -n $(find "$marker" -mtime +0 2>/dev/null) ]]; then
+        "$script" --quiet
+        touch "$marker"
+    fi
+}
+__dotfiles_drift_check
+unset -f __dotfiles_drift_check
