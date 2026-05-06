@@ -2,3 +2,13 @@
 --ignore=.stowrc
 --ignore=DS_Store
 --ignore=atuin/*
+
+# Top-level repo machinery — not config files
+--ignore=^install\.(sh|ps1)$
+--ignore=^setup\.(sh|ps1)$
+--ignore=^test\.ps1$
+--ignore=^README\.md$
+
+# Platform-specific installer payloads, not Linux configs
+--ignore=^linux$
+--ignore=^windows$

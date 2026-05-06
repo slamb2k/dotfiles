@@ -120,11 +120,15 @@ fi
 # 5. Language runtimes via mise
 # -----------------------------------------------------------------------------
 section 'mise runtimes'
+MISE_CFG="$(dirname "$0")/mise/config.toml"
 if ! command -v mise &>/dev/null; then
   note '(mise not installed yet — install via Brewfile first)'
 elif [[ -n $DRY_RUN ]]; then
+  would "mise trust $MISE_CFG"
   mise ls --current 2>&1 | sed 's/^/  /' || true
 else
+  # Trust the repo's mise config so subsequent `mise install` / `mise ls` don't error
+  mise trust "$MISE_CFG" 2>/dev/null || true
   mise install
 fi
 
