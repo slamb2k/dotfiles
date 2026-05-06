@@ -28,6 +28,12 @@ Invoke-WebRequest 'https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx' -OutF
 $uixaml = "$tmp\Microsoft.UI.Xaml.2.8.x64.appx"
 Invoke-WebRequest 'https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx' -OutFile $uixaml
 
+# Microsoft.WindowsAppRuntime.1.8 — modern winget releases (1.10+) require this.
+# The official redistributable installer registers all needed appx packages.
+$warExe = "$tmp\windowsappruntimeinstall-x64.exe"
+Invoke-WebRequest 'https://aka.ms/windowsappsdk/1.8/latest/windowsappruntimeinstall-x64.exe' -OutFile $warExe
+Start-Process -FilePath $warExe -ArgumentList '--quiet' -Wait
+
 # winget itself — pull latest .msixbundle from the GitHub release
 $rel = Invoke-RestMethod 'https://api.github.com/repos/microsoft/winget-cli/releases/latest'
 $bundleAsset = $rel.assets | Where-Object name -Like 'Microsoft.DesktopAppInstaller_*.msixbundle' | Select-Object -First 1
