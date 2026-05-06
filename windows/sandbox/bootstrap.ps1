@@ -20,28 +20,41 @@ Section 'Installing winget'
 $tmp = "$env:TEMP\winget-bootstrap"
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 
-# VCLibs (Desktop framework dep)
-$vclibs = "$tmp\Microsoft.VCLibs.x64.14.00.Desktop.appx"
-Invoke-WebRequest 'https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx' -OutFile $vclibs
+# Detect host arch so we install only the matching appx variants
+$arch = switch ($env:PROCESSOR_ARCHITECTURE) {
+    'AMD64' { 'x64' }
+    'ARM64' { 'arm64' }
+    default { 'x86' }
+}
 
-# UI.Xaml dep (use a known-good version that pairs with current winget releases)
-$uixaml = "$tmp\Microsoft.UI.Xaml.2.8.x64.appx"
-Invoke-WebRequest 'https://github.com/microsoft/microsoft-ui-xaml/releases/download/v2.8.6/Microsoft.UI.Xaml.2.8.x64.appx' -OutFile $uixaml
-
-# Microsoft.WindowsAppRuntime.1.8 — modern winget releases (1.10+) require this.
-# The official redistributable installer registers all needed appx packages.
+# Microsoft.WindowsAppRuntime.1.8 — modern winget (1.10+) needs this. Install
+# from the official redistributable, which registers a current version.
 $warExe = "$tmp\windowsappruntimeinstall-x64.exe"
 Invoke-WebRequest 'https://aka.ms/windowsappsdk/1.8/latest/windowsappruntimeinstall-x64.exe' -OutFile $warExe
 Start-Process -FilePath $warExe -ArgumentList '--quiet' -Wait
 
-# winget itself — pull latest .msixbundle from the GitHub release
-$rel = Invoke-RestMethod 'https://api.github.com/repos/microsoft/winget-cli/releases/latest'
+# Pull the latest winget release + its matching DesktopAppInstaller_Dependencies
+# zip. Using the deps zip from the *same* release guarantees VCLibs/etc versions
+# line up with the bundle — hand-rolled aka.ms URLs drift out of sync.
+$rel         = Invoke-RestMethod 'https://api.github.com/repos/microsoft/winget-cli/releases/latest'
 $bundleAsset = $rel.assets | Where-Object name -Like 'Microsoft.DesktopAppInstaller_*.msixbundle' | Select-Object -First 1
+$depsAsset   = $rel.assets | Where-Object name -eq 'DesktopAppInstaller_Dependencies.zip' | Select-Object -First 1
+
 $bundle = "$tmp\winget.msixbundle"
 Invoke-WebRequest $bundleAsset.browser_download_url -OutFile $bundle
 
-Add-AppxPackage $vclibs
-Add-AppxPackage $uixaml
+if ($depsAsset) {
+    $depsZip = "$tmp\deps.zip"
+    Invoke-WebRequest $depsAsset.browser_download_url -OutFile $depsZip
+    Expand-Archive $depsZip -DestinationPath "$tmp\deps" -Force
+    Get-ChildItem "$tmp\deps" -Recurse -Filter '*.appx' |
+        Where-Object { $_.Name -match "_${arch}\.appx$" } |
+        ForEach-Object {
+            Write-Host "Installing dep: $($_.Name)"
+            Add-AppxPackage $_.FullName -ErrorAction SilentlyContinue
+        }
+}
+
 Add-AppxPackage $bundle
 
 # Refresh PATH so `winget` resolves in this same session
