@@ -19,10 +19,10 @@
 # Things this file CANNOT restore automatically (review separately):
 #   * Tailscale login / device key
 #   * Docker Desktop login + WSL distro internals (use chezmoi inside the distro)
-#   * SSH keys, GPG keys, Bitwarden / Keeper / 1Password sessions
+#   * SSH keys, GPG keys, Keeper / 1Password sessions
 #   * Microsoft / Apple / Google / GitHub account sign-ins
 #   * Windows Hello (face / fingerprint enrollment)
-#   * Application licences (AIDA64, ACE Studio, Audient EVO drivers etc.)
+#   * Application licences (AIDA64, Audient EVO drivers etc.)
 #   * Wallpaper, taskbar pin order, Start menu layout
 #
 properties:
@@ -252,11 +252,6 @@ properties:
       settings: { id: jqlang.jq, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
-      id: pkgChezmoi
-      directives: { description: chezmoi dotfiles manager, allowPrerelease: true }
-      settings: { id: twpayne.chezmoi, source: winget, installMode: silent }
-
-    - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgLiveKit
       directives: { description: LiveKit CLI, allowPrerelease: true }
       settings: { id: LiveKit.LiveKitCLI, source: winget, installMode: silent }
@@ -322,11 +317,6 @@ properties:
     # Password / secrets managers
     # =========================================================================
     - resource: Microsoft.WinGet.DSC/WinGetPackage
-      id: pkgBitwarden
-      directives: { description: Bitwarden Desktop, allowPrerelease: true }
-      settings: { id: Bitwarden.Bitwarden, source: winget, installMode: silent }
-
-    - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgKeeper
       directives: { description: Keeper Security Desktop, allowPrerelease: true }
       settings: { id: KeeperSecurity.KeeperDesktop, source: winget, installMode: silent }
@@ -338,11 +328,6 @@ properties:
       id: pkgEvo
       directives: { description: Audient EVO mixer (USB audio interface), allowPrerelease: true }
       settings: { id: Audient.EVO, source: winget, installMode: silent }
-
-    - resource: Microsoft.WinGet.DSC/WinGetPackage
-      id: pkgACEStudio
-      directives: { description: ACE Studio (vocal AI), allowPrerelease: true }
-      settings: { id: ACEStudio.ACEStudio, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgLogiOptions
@@ -664,7 +649,7 @@ properties:
     # =========================================================================
     # Manual follow-ups (not declarable here)
     # =========================================================================
-    # 1. Sign in: Microsoft account, GitHub (`gh auth login`), Tailscale, Bitwarden, Keeper, Signal, Teams, OneDrive, Docker Hub.
+    # 1. Sign in: Microsoft account, GitHub (`gh auth login`), Tailscale, Keeper, Signal, Teams, OneDrive, Docker Hub.
     # 2. SSH / GPG: copy ~/.ssh and ~/.config/git/allowed_signers from your backup.
     # 3. Inside each WSL distro: clone the dotfiles repo and `stow .` (or run chezmoi).
     # 4. Windows Terminal: settings.json is already restored once you sign into MS account + WT roams settings; otherwise drop your saved settings.json into:
