@@ -358,22 +358,26 @@ properties:
       settings: { id: Google.PlayGames, source: winget }
 
     # =========================================================================
-    # Microsoft Store packages (msstore source — interactive licence acceptance)
+    # Apps available on both winget and msstore — using winget source for
+    # Sandbox compatibility (msstore source 500s in Sandbox: region/license
+    # metadata isn't provisioned). On a real machine these install identically;
+    # only difference is they self-update instead of Store-update.
+    # Original msstore IDs preserved in comments in case you want to switch back.
     # =========================================================================
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgVSCode
-      directives: { description: Visual Studio Code (Store), allowPrerelease: true }
-      settings: { id: XP9KHM4BK9FZ7Q, source: msstore }
+      directives: { description: Visual Studio Code, allowPrerelease: true }
+      settings: { id: Microsoft.VisualStudioCode, source: winget }   # was msstore XP9KHM4BK9FZ7Q
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgPowerToys
-      directives: { description: Microsoft PowerToys (Store), allowPrerelease: true }
-      settings: { id: XP89DCGQ3K6VLD, source: msstore }
+      directives: { description: Microsoft PowerToys, allowPrerelease: true }
+      settings: { id: Microsoft.PowerToys, source: winget }          # was msstore XP89DCGQ3K6VLD
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgDiscord
-      directives: { description: Discord (Store), allowPrerelease: true }
-      settings: { id: XPDC2RH70K22MN, source: msstore }
+      directives: { description: Discord, allowPrerelease: true }
+      settings: { id: Discord.Discord, source: winget }              # was msstore XPDC2RH70K22MN
 
     # =========================================================================
     # Runtimes — Visual C++ redistributables and AppRuntimes
