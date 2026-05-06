@@ -30,25 +30,39 @@ properties:
   resources:
 
     # =========================================================================
-    # Windows optional features (WSL stack)
+    # Windows optional features (via dism.exe — sidesteps the
+    # PSDscResources/WindowsOptionalFeature "Class not registered" bug under
+    # pwsh 7, which is what `winget configure` runs DSC in)
     # =========================================================================
-    - resource: PSDscResources/WindowsOptionalFeature
+    - resource: PSDscResources/Script
       id: featureWSL
       directives:
         description: Enable Windows Subsystem for Linux
         allowPrerelease: true
       settings:
-        Name: Microsoft-Windows-Subsystem-Linux
-        Ensure: Present
+        GetScript: |
+          $r = & dism.exe /online /Get-FeatureInfo /FeatureName:Microsoft-Windows-Subsystem-Linux 2>$null
+          return @{ Result = ($r -join "`n") }
+        TestScript: |
+          $r = & dism.exe /online /Get-FeatureInfo /FeatureName:Microsoft-Windows-Subsystem-Linux 2>$null
+          return ($r -match 'State\s*:\s*Enabled').Count -gt 0
+        SetScript: |
+          & dism.exe /online /Enable-Feature /FeatureName:Microsoft-Windows-Subsystem-Linux /All /NoRestart | Out-Null
 
-    - resource: PSDscResources/WindowsOptionalFeature
+    - resource: PSDscResources/Script
       id: featureVMP
       directives:
         description: Enable Virtual Machine Platform (required for WSL2)
         allowPrerelease: true
       settings:
-        Name: VirtualMachinePlatform
-        Ensure: Present
+        GetScript: |
+          $r = & dism.exe /online /Get-FeatureInfo /FeatureName:VirtualMachinePlatform 2>$null
+          return @{ Result = ($r -join "`n") }
+        TestScript: |
+          $r = & dism.exe /online /Get-FeatureInfo /FeatureName:VirtualMachinePlatform 2>$null
+          return ($r -match 'State\s*:\s*Enabled').Count -gt 0
+        SetScript: |
+          & dism.exe /online /Enable-Feature /FeatureName:VirtualMachinePlatform /All /NoRestart | Out-Null
 
     # =========================================================================
     # Developer settings (quick toggles — verify this codepath works)

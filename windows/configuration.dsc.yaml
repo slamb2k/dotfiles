@@ -43,35 +43,55 @@ properties:
   resources:
 
     # =========================================================================
-    # Windows optional features
+    # Windows optional features (via dism.exe — sidesteps the
+    # PSDscResources/WindowsOptionalFeature "Class not registered" bug under
+    # pwsh 7, which is what `winget configure` runs DSC in)
     # =========================================================================
-    - resource: PSDscResources/WindowsOptionalFeature
+    - resource: PSDscResources/Script
       id: featureWSL
       directives:
         description: Enable Windows Subsystem for Linux
         allowPrerelease: true
       settings:
-        Name: Microsoft-Windows-Subsystem-Linux
-        Ensure: Present
+        GetScript: |
+          $r = & dism.exe /online /Get-FeatureInfo /FeatureName:Microsoft-Windows-Subsystem-Linux 2>$null
+          return @{ Result = ($r -join "`n") }
+        TestScript: |
+          $r = & dism.exe /online /Get-FeatureInfo /FeatureName:Microsoft-Windows-Subsystem-Linux 2>$null
+          return ($r -match 'State\s*:\s*Enabled').Count -gt 0
+        SetScript: |
+          & dism.exe /online /Enable-Feature /FeatureName:Microsoft-Windows-Subsystem-Linux /All /NoRestart | Out-Null
 
-    - resource: PSDscResources/WindowsOptionalFeature
+    - resource: PSDscResources/Script
       id: featureVMP
       directives:
         description: Enable Virtual Machine Platform (required for WSL2 + Docker Desktop)
         allowPrerelease: true
       settings:
-        Name: VirtualMachinePlatform
-        Ensure: Present
+        GetScript: |
+          $r = & dism.exe /online /Get-FeatureInfo /FeatureName:VirtualMachinePlatform 2>$null
+          return @{ Result = ($r -join "`n") }
+        TestScript: |
+          $r = & dism.exe /online /Get-FeatureInfo /FeatureName:VirtualMachinePlatform 2>$null
+          return ($r -match 'State\s*:\s*Enabled').Count -gt 0
+        SetScript: |
+          & dism.exe /online /Enable-Feature /FeatureName:VirtualMachinePlatform /All /NoRestart | Out-Null
 
     # SmbDirect was enabled on the source machine — useful for high-throughput SMB
-    - resource: PSDscResources/WindowsOptionalFeature
+    - resource: PSDscResources/Script
       id: featureSmbDirect
       directives:
         description: Enable SMB Direct (RDMA)
         allowPrerelease: true
       settings:
-        Name: SmbDirect
-        Ensure: Present
+        GetScript: |
+          $r = & dism.exe /online /Get-FeatureInfo /FeatureName:SmbDirect 2>$null
+          return @{ Result = ($r -join "`n") }
+        TestScript: |
+          $r = & dism.exe /online /Get-FeatureInfo /FeatureName:SmbDirect 2>$null
+          return ($r -match 'State\s*:\s*Enabled').Count -gt 0
+        SetScript: |
+          & dism.exe /online /Enable-Feature /FeatureName:SmbDirect /All /NoRestart | Out-Null
 
     # =========================================================================
     # Developer / Explorer / theme settings
