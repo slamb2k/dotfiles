@@ -89,22 +89,22 @@ properties:
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgGit
       directives: { description: Git for Windows, allowPrerelease: true }
-      settings: { id: Git.Git, source: winget }
+      settings: { id: Git.Git, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgPwsh
       directives: { description: PowerShell 7+, allowPrerelease: true }
-      settings: { id: Microsoft.PowerShell, source: winget }
+      settings: { id: Microsoft.PowerShell, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgWindowsTerminal
       directives: { description: Windows Terminal (so the Ubuntu profile is launchable), allowPrerelease: true }
-      settings: { id: Microsoft.WindowsTerminal, source: winget }
+      settings: { id: Microsoft.WindowsTerminal, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgWSL
       directives: { description: WSL (Store edition), allowPrerelease: true }
-      settings: { id: Microsoft.WSL, source: winget }
+      settings: { id: Microsoft.WSL, source: winget, installMode: silent }
 
     # =========================================================================
     # WSL distro install + config

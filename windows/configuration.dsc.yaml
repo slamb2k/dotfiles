@@ -171,47 +171,47 @@ properties:
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgGit
       directives: { description: Git for Windows, allowPrerelease: true }
-      settings: { id: Git.Git, source: winget }
+      settings: { id: Git.Git, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgGh
       directives: { description: GitHub CLI, allowPrerelease: true }
-      settings: { id: GitHub.cli, source: winget }
+      settings: { id: GitHub.cli, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgPwsh
       directives: { description: PowerShell 7+, allowPrerelease: true }
-      settings: { id: Microsoft.PowerShell, source: winget }
+      settings: { id: Microsoft.PowerShell, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgWindowsTerminal
       directives: { description: Windows Terminal, allowPrerelease: true }
-      settings: { id: Microsoft.WindowsTerminal, source: winget }
+      settings: { id: Microsoft.WindowsTerminal, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgWSL
       directives: { description: WSL (Store edition), allowPrerelease: true }
-      settings: { id: Microsoft.WSL, source: winget }
+      settings: { id: Microsoft.WSL, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgAppInstaller
       directives: { description: App Installer (winget itself), allowPrerelease: true }
-      settings: { id: Microsoft.AppInstaller, source: winget }
+      settings: { id: Microsoft.AppInstaller, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgNode
       directives: { description: Node.js LTS, allowPrerelease: true }
-      settings: { id: OpenJS.NodeJS.LTS, source: winget }
+      settings: { id: OpenJS.NodeJS.LTS, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgClaude
       directives: { description: Anthropic Claude desktop app, allowPrerelease: true }
-      settings: { id: Anthropic.Claude, source: winget }
+      settings: { id: Anthropic.Claude, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgGsudo
       directives: { description: gsudo (sudo for Windows), allowPrerelease: true }
-      settings: { id: gerardog.gsudo, source: winget }
+      settings: { id: gerardog.gsudo, source: winget, installMode: silent }
 
     # =========================================================================
     # CLI utilities (host-side; the WSL side gets these via Brewfile)
@@ -219,52 +219,52 @@ properties:
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgStarship
       directives: { description: Starship prompt, allowPrerelease: true }
-      settings: { id: Starship.Starship, source: winget }
+      settings: { id: Starship.Starship, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgZoxide
       directives: { description: zoxide directory jumper, allowPrerelease: true }
-      settings: { id: ajeetdsouza.zoxide, source: winget }
+      settings: { id: ajeetdsouza.zoxide, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgFzf
       directives: { description: fzf fuzzy finder, allowPrerelease: true }
-      settings: { id: junegunn.fzf, source: winget }
+      settings: { id: junegunn.fzf, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgRipgrep
       directives: { description: ripgrep (MSVC build), allowPrerelease: true }
-      settings: { id: BurntSushi.ripgrep.MSVC, source: winget }
+      settings: { id: BurntSushi.ripgrep.MSVC, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgFd
       directives: { description: fd find replacement, allowPrerelease: true }
-      settings: { id: sharkdp.fd, source: winget }
+      settings: { id: sharkdp.fd, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgBat
       directives: { description: bat (cat with syntax highlight), allowPrerelease: true }
-      settings: { id: sharkdp.bat, source: winget }
+      settings: { id: sharkdp.bat, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgJq
       directives: { description: jq JSON processor, allowPrerelease: true }
-      settings: { id: jqlang.jq, source: winget }
+      settings: { id: jqlang.jq, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgChezmoi
       directives: { description: chezmoi dotfiles manager, allowPrerelease: true }
-      settings: { id: twpayne.chezmoi, source: winget }
+      settings: { id: twpayne.chezmoi, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgLiveKit
       directives: { description: LiveKit CLI, allowPrerelease: true }
-      settings: { id: LiveKit.LiveKitCLI, source: winget }
+      settings: { id: LiveKit.LiveKitCLI, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgAutoHotkey
       directives: { description: AutoHotkey 2, allowPrerelease: true }
-      settings: { id: AutoHotkey.AutoHotkey, source: winget }
+      settings: { id: AutoHotkey.AutoHotkey, source: winget, installMode: silent }
 
     # =========================================================================
     # Browsers
@@ -272,12 +272,12 @@ properties:
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgChrome
       directives: { description: Google Chrome, allowPrerelease: true }
-      settings: { id: Google.Chrome.EXE, source: winget }
+      settings: { id: Google.Chrome.EXE, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgEdge
       directives: { description: Microsoft Edge, allowPrerelease: true }
-      settings: { id: Microsoft.Edge, source: winget }
+      settings: { id: Microsoft.Edge, source: winget, installMode: silent }
 
     # =========================================================================
     # Containers / VMs / device passthrough
@@ -285,17 +285,17 @@ properties:
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgDocker
       directives: { description: Docker Desktop, allowPrerelease: true }
-      settings: { id: Docker.DockerDesktop, source: winget }
+      settings: { id: Docker.DockerDesktop, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgUsbipd
       directives: { description: usbipd-win — share USB devices into WSL, allowPrerelease: true }
-      settings: { id: dorssel.usbipd-win, source: winget }
+      settings: { id: dorssel.usbipd-win, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgLinuxReader
       directives: { description: DiskInternals Linux Reader (mount ext4 from Windows), allowPrerelease: true }
-      settings: { id: DiskInternals.LinuxReader, source: winget }
+      settings: { id: DiskInternals.LinuxReader, source: winget, installMode: silent }
 
     # =========================================================================
     # Networking / mesh VPN
@@ -303,7 +303,7 @@ properties:
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgTailscale
       directives: { description: Tailscale mesh VPN, allowPrerelease: true }
-      settings: { id: Tailscale.Tailscale, source: winget }
+      settings: { id: Tailscale.Tailscale, source: winget, installMode: silent }
 
     # =========================================================================
     # Communication / messaging
@@ -311,12 +311,12 @@ properties:
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgTeams
       directives: { description: Microsoft Teams, allowPrerelease: true }
-      settings: { id: Microsoft.Teams, source: winget }
+      settings: { id: Microsoft.Teams, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgSignal
       directives: { description: Signal Desktop, allowPrerelease: true }
-      settings: { id: OpenWhisperSystems.Signal, source: winget }
+      settings: { id: OpenWhisperSystems.Signal, source: winget, installMode: silent }
 
     # =========================================================================
     # Password / secrets managers
@@ -324,12 +324,12 @@ properties:
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgBitwarden
       directives: { description: Bitwarden Desktop, allowPrerelease: true }
-      settings: { id: Bitwarden.Bitwarden, source: winget }
+      settings: { id: Bitwarden.Bitwarden, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgKeeper
       directives: { description: Keeper Security Desktop, allowPrerelease: true }
-      settings: { id: KeeperSecurity.KeeperDesktop, source: winget }
+      settings: { id: KeeperSecurity.KeeperDesktop, source: winget, installMode: silent }
 
     # =========================================================================
     # Hardware / audio (review — these are personal; skip on a non-equivalent box)
@@ -337,17 +337,17 @@ properties:
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgEvo
       directives: { description: Audient EVO mixer (USB audio interface), allowPrerelease: true }
-      settings: { id: Audient.EVO, source: winget }
+      settings: { id: Audient.EVO, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgACEStudio
       directives: { description: ACE Studio (vocal AI), allowPrerelease: true }
-      settings: { id: ACEStudio.ACEStudio, source: winget }
+      settings: { id: ACEStudio.ACEStudio, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgLogiOptions
       directives: { description: Logitech Options+ for mouse/keyboard, allowPrerelease: true }
-      settings: { id: Logitech.OptionsPlus, source: winget }
+      settings: { id: Logitech.OptionsPlus, source: winget, installMode: silent }
 
     # =========================================================================
     # System / sysinternals / diagnostics
@@ -355,27 +355,27 @@ properties:
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgProcExp
       directives: { description: Sysinternals Process Explorer, allowPrerelease: true }
-      settings: { id: Microsoft.Sysinternals.ProcessExplorer, source: winget }
+      settings: { id: Microsoft.Sysinternals.ProcessExplorer, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgAida64
       directives: { description: AIDA64 Extreme system info, allowPrerelease: true }
-      settings: { id: FinalWire.AIDA64.Extreme, source: winget }
+      settings: { id: FinalWire.AIDA64.Extreme, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgCpuZ
       directives: { description: CPU-Z (MSI build), allowPrerelease: true }
-      settings: { id: CPUID.CPU-Z.MSI, source: winget }
+      settings: { id: CPUID.CPU-Z.MSI, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgOneDrive
       directives: { description: OneDrive client, allowPrerelease: true }
-      settings: { id: Microsoft.OneDrive, source: winget }
+      settings: { id: Microsoft.OneDrive, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgPlayGames
       directives: { description: Google Play Games beta, allowPrerelease: true }
-      settings: { id: Google.PlayGames, source: winget }
+      settings: { id: Google.PlayGames, source: winget, installMode: silent }
 
     # =========================================================================
     # Apps available on both winget and msstore — using winget source for
@@ -387,17 +387,17 @@ properties:
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgVSCode
       directives: { description: Visual Studio Code, allowPrerelease: true }
-      settings: { id: Microsoft.VisualStudioCode, source: winget }   # was msstore XP9KHM4BK9FZ7Q
+      settings: { id: Microsoft.VisualStudioCode, source: winget, installMode: silent }   # was msstore XP9KHM4BK9FZ7Q
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgPowerToys
       directives: { description: Microsoft PowerToys, allowPrerelease: true }
-      settings: { id: Microsoft.PowerToys, source: winget }          # was msstore XP89DCGQ3K6VLD
+      settings: { id: Microsoft.PowerToys, source: winget, installMode: silent }          # was msstore XP89DCGQ3K6VLD
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgDiscord
       directives: { description: Discord, allowPrerelease: true }
-      settings: { id: Discord.Discord, source: winget }              # was msstore XPDC2RH70K22MN
+      settings: { id: Discord.Discord, source: winget, installMode: silent }              # was msstore XPDC2RH70K22MN
 
     # =========================================================================
     # Runtimes — Visual C++ redistributables and AppRuntimes
@@ -406,57 +406,57 @@ properties:
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgVCRedist2013x64
       directives: { description: VC++ 2013 x64 runtime, allowPrerelease: true }
-      settings: { id: Microsoft.VCRedist.2013.x64, source: winget }
+      settings: { id: Microsoft.VCRedist.2013.x64, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgVCRedist2015x64
       directives: { description: VC++ 2015+ x64 runtime, allowPrerelease: true }
-      settings: { id: Microsoft.VCRedist.2015+.x64, source: winget }
+      settings: { id: Microsoft.VCRedist.2015+.x64, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgVCRedist2015x86
       directives: { description: VC++ 2015+ x86 runtime, allowPrerelease: true }
-      settings: { id: Microsoft.VCRedist.2015+.x86, source: winget }
+      settings: { id: Microsoft.VCRedist.2015+.x86, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgVCLibs14
       directives: { description: VCLibs 14 UWP runtime, allowPrerelease: true }
-      settings: { id: Microsoft.VCLibs.14, source: winget }
+      settings: { id: Microsoft.VCLibs.14, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgVCLibs14Desktop
       directives: { description: VCLibs 14 desktop UWP runtime, allowPrerelease: true }
-      settings: { id: Microsoft.VCLibs.Desktop.14, source: winget }
+      settings: { id: Microsoft.VCLibs.Desktop.14, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgUIXaml27
       directives: { description: WinUI 2.7, allowPrerelease: true }
-      settings: { id: Microsoft.UI.Xaml.2.7, source: winget }
+      settings: { id: Microsoft.UI.Xaml.2.7, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgUIXaml28
       directives: { description: WinUI 2.8, allowPrerelease: true }
-      settings: { id: Microsoft.UI.Xaml.2.8, source: winget }
+      settings: { id: Microsoft.UI.Xaml.2.8, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgAppRuntime16
       directives: { description: Windows App Runtime 1.6, allowPrerelease: true }
-      settings: { id: Microsoft.WindowsAppRuntime.1.6, source: winget }
+      settings: { id: Microsoft.WindowsAppRuntime.1.6, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgAppRuntime17
       directives: { description: Windows App Runtime 1.7, allowPrerelease: true }
-      settings: { id: Microsoft.WindowsAppRuntime.1.7, source: winget }
+      settings: { id: Microsoft.WindowsAppRuntime.1.7, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgAppRuntime18
       directives: { description: Windows App Runtime 1.8, allowPrerelease: true }
-      settings: { id: Microsoft.WindowsAppRuntime.1.8, source: winget }
+      settings: { id: Microsoft.WindowsAppRuntime.1.8, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgDotNetNative
       directives: { description: .NET Native runtime (UWP), allowPrerelease: true }
-      settings: { id: Microsoft.DotNet.Native.Runtime, source: winget }
+      settings: { id: Microsoft.DotNet.Native.Runtime, source: winget, installMode: silent }
 
     # =========================================================================
     # WSL — install Ubuntu (default), keep Ubuntu-Test as a scratch distro,
