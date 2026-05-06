@@ -62,7 +62,7 @@ alias ......="cd ../../../../.."
 export GOPATH='/Users/omerxx/go'
 
 # VIM
-alias v="/Users/omerxx/.nix-profile/bin/nvim"
+alias v="nvim"
 
 # Nmap
 alias nm="nmap -sC -sV -oN nmap"
@@ -116,10 +116,6 @@ export PATH=/opt/homebrew/bin:$PATH
 
 alias mat='osascript -e "tell application \"System Events\" to key code 126 using {command down}" && tmux neww "cmatrix"'
 
-# Nix!
-export NIX_CONF_DIR=$HOME/.config/nix
-export PATH=/run/current-system/sw/bin:$PATH
-
 function ranger {
 	local IFS=$'\t\n'
 	local tempfile="$(mktemp -t tmp.XXXXXX)"
@@ -142,12 +138,6 @@ cx() { cd "$@" && l; }
 fcd() { cd "$(find . -type d -not -path '*/.*' | fzf)" && l; }
 f() { echo "$(find . -type f -not -path '*/.*' | fzf)" | pbcopy }
 fv() { nvim "$(find . -type f -not -path '*/.*' | fzf)" }
-
- # Nix
- if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
-	 . '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
- fi
- # End Nix
 
 export XDG_CONFIG_HOME="/Users/omerxx/.config"
 
