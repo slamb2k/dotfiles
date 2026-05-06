@@ -2,12 +2,14 @@
   <!--
     Minimal-test variant of dotfiles-sandbox.wsb.
 
-    Same flow as the full sandbox, but bootstrap.ps1 reads the
-    DOTFILES_PROFILE env var and runs configuration.dsc.minimal.yaml
-    (WSL + Ubuntu + Git + Pwsh + Terminal — ~12 resources, 3-5 min).
+    Runs configuration.dsc.minimal.yaml (WSL + Ubuntu + Git + Pwsh +
+    Terminal — ~12 resources, 3-5 min). Use for fast iteration; use
+    dotfiles-sandbox.wsb for end-to-end machine-restoration tests.
 
-    Use this for fast iteration on setup.ps1 plumbing or setup.sh; use the
-    full dotfiles-sandbox.wsb for end-to-end machine restoration tests.
+    Inside the sandbox, two diagnostic files appear:
+      C:\sandbox-marker.txt       proves LogonCommand fired
+      C:\sandbox-bootstrap.log    full transcript of bootstrap.ps1
+    Tail with: Get-Content C:\sandbox-bootstrap.log -Wait
   -->
   <Networking>Default</Networking>
   <vGPU>Disable</vGPU>
@@ -15,6 +17,6 @@
   <ClipboardRedirection>true</ClipboardRedirection>
   <ProtectedClient>false</ProtectedClient>
   <LogonCommand>
-    <Command>powershell.exe -ExecutionPolicy Bypass -NoExit -Command "$env:DOTFILES_PROFILE='minimal'; iwr -UseBasicParsing https://raw.githubusercontent.com/slamb2k/dotfiles/main/windows/sandbox/bootstrap.ps1 | iex"</Command>
+    <Command>cmd.exe /c "echo logon-fired %DATE% %TIME% &gt; C:\sandbox-marker.txt &amp; start &quot;&quot; powershell.exe -ExecutionPolicy Bypass -NoExit -Command &quot;Start-Transcript -Path C:\sandbox-bootstrap.log -Force; $env:DOTFILES_PROFILE='minimal'; Start-Sleep -Seconds 8; iwr -UseBasicParsing https://raw.githubusercontent.com/slamb2k/dotfiles/main/windows/sandbox/bootstrap.ps1 | iex&quot;"</Command>
   </LogonCommand>
 </Configuration>
