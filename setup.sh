@@ -31,6 +31,9 @@ section() {
 note()  { printf "  %s\n" "$*"; }
 would() { printf "  would: %s\n" "$*"; }
 
+# True on WSL — used to skip installs the Windows host already provides.
+is_wsl() { [[ -n ${WSL_DISTRO_NAME:-} ]] || grep -qiE 'microsoft|wsl' /proc/version 2>/dev/null; }
+
 # -----------------------------------------------------------------------------
 # Helper: install a tool from its own apt repository.
 #   install_apt_repo <name> <key_url> <repo_line> [packages]
@@ -129,7 +132,10 @@ elif [[ -n $DRY_RUN ]]; then
 else
   # Trust the repo's mise config so subsequent `mise install` / `mise ls` don't error
   mise trust "$MISE_CFG" 2>/dev/null || true
-  mise install
+  # Skip node GPG signature verification: brew gpg 2.5.19 can't talk to system
+  # keyboxd 2.4.4, so verification fails even with the signing key imported.
+  # HTTPS + SHA256 checksum still apply.
+  MISE_NODE_VERIFY=false mise install
 fi
 
 # =============================================================================
@@ -184,16 +190,22 @@ fi
 
 # -----------------------------------------------------------------------------
 # Tailscale  https://tailscale.com/kb/1031/install-linux
+# Skipped on WSL — the Windows host runs Tailscale and the WSL distro inherits
+# the tunnel. Installed on bare-metal/VM Linux dev machines.
 # -----------------------------------------------------------------------------
 section 'Tailscale'
-install_apt_repo tailscale \
-  "https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg" \
-  "https://pkgs.tailscale.com/stable/ubuntu noble main"
-if command -v tailscale &>/dev/null; then
-  if [[ -n $DRY_RUN ]]; then
-    would 'sudo tailscale up'
-  else
-    sudo tailscale up
+if is_wsl; then
+  note 'WSL detected — skipping (Windows host handles Tailscale)'
+else
+  install_apt_repo tailscale \
+    "https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg" \
+    "https://pkgs.tailscale.com/stable/ubuntu noble main"
+  if command -v tailscale &>/dev/null; then
+    if [[ -n $DRY_RUN ]]; then
+      would 'sudo tailscale up'
+    else
+      sudo tailscale up
+    fi
   fi
 fi
 
