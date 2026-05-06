@@ -34,6 +34,7 @@ brew "act"                       # GitHub Actions workflows locally in Docker
 brew "ripgrep"                   # rg
 brew "fd"                        # fd-find without the rename dance
 brew "fzf"
+brew "television"                # `tv` — TUI fuzzy finder (config in dotfiles/television)
 brew "bat"                       # cat replacement; brew avoids the "batcat" rename
 brew "eza"                       # ls replacement (currently MISSING on this box)
 brew "zoxide"                    # smarter cd
@@ -110,7 +111,6 @@ brew "dive"                      # explore image layers
 brew "git-delta"                 # better git diff (`delta`)
 brew "git-lfs"
 brew "gitleaks"                  # secret scanner
-brew "gh-dash"                   # gh extension wrapper (config dir exists)
 brew "pre-commit"
 
 # =============================================================================
