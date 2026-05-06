@@ -132,6 +132,27 @@ candidates=${candidates%$'\n'}
 section "untracked ~/.config dirs (potential new dotfiles, top 10)" "$(count_lines "$candidates")" "$candidates"
 
 # -----------------------------------------------------------------------------
+# 7. Uncommitted changes in the dotfiles repo working tree
+# -----------------------------------------------------------------------------
+if [[ -d $REPO/.git ]]; then
+    porcelain=$(git -C "$REPO" status --porcelain 2>/dev/null | head -20)
+    [[ -n $porcelain ]] && section "uncommitted dotfiles changes (run \`cd ~/dotfiles && git status\`)" \
+        "$(count_lines "$porcelain")" "$porcelain"
+
+    # -------------------------------------------------------------------------
+    # 8. Local commits not yet pushed to origin
+    # -------------------------------------------------------------------------
+    if git -C "$REPO" rev-parse --abbrev-ref '@{u}' &>/dev/null; then
+        ahead=$(git -C "$REPO" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)
+        if [[ $ahead -gt 0 ]]; then
+            ahead_log=$(git -C "$REPO" log --oneline '@{u}..HEAD' 2>/dev/null)
+            section "unpushed dotfiles commits (run \`cd ~/dotfiles && git push\`)" \
+                "$ahead" "$ahead_log"
+        fi
+    fi
+fi
+
+# -----------------------------------------------------------------------------
 # Summary
 # -----------------------------------------------------------------------------
 if [[ $TOTAL_DRIFT -eq 0 ]]; then
