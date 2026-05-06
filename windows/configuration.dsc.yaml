@@ -535,11 +535,19 @@ properties:
           }
           return $true
         SetScript: |
-          $pwsh = (Get-Command pwsh -ErrorAction SilentlyContinue)?.Source
-          if (-not $pwsh) { $pwsh = 'pwsh.exe' }
-          & $pwsh -NoProfile -Command "Install-Module -Name PSReadLine -Force -SkipPublisherCheck -Scope CurrentUser"
-          & $pwsh -NoProfile -Command "Install-Module -Name Terminal-Icons -Force -Scope CurrentUser"
-          & $pwsh -NoProfile -Command "Install-Module -Name posh-git -Force -Scope CurrentUser"
+          # SetScript runs under pwsh 7 (winget configure's DSC engine), so we
+          # can call Install-Module directly. Re-invoking pwsh.exe via & inside
+          # a DSC Script trips ".NET StandardOutputEncoding is only supported
+          # when standard output is redirected" because PowerShell's call
+          # operator sets the encoding without forcing the matching redirect.
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -ErrorAction SilentlyContinue
+          foreach ($m in 'PSReadLine','Terminal-Icons','posh-git') {
+              try {
+                  Install-Module -Name $m -Force -SkipPublisherCheck -AllowClobber -Scope CurrentUser -Repository PSGallery -ErrorAction Stop
+              } catch {
+                  Write-Warning "Failed to install module $m`: $_"
+              }
+          }
 
     # =========================================================================
     # VS Code extensions (bulk install via `code --install-extension`)
