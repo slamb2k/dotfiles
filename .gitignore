@@ -3,3 +3,7 @@ tmux/plugins/
 raycast
 fzf
 history.txt
+
+# zsh — completion cache and per-machine overrides
+zshrc/.zcompdump
+zshrc/.zshrc.local

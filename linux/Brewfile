@@ -67,6 +67,7 @@ brew "tmux"
 # Shell / prompt / history
 # =============================================================================
 brew "starship"                  # currently in /usr/local/bin (manual install)
+brew "zsh-autosuggestions"       # sourced by zshrc/conf.d/10-completions.zsh
 brew "atuin"                     # shell-history sync (currently MISSING)
 brew "direnv"                    # .envrc per-dir env (referenced by .zshrc, currently MISSING)
 brew "fzf"                       # already above; left for grep-friendly visibility
