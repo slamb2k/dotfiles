@@ -18,7 +18,7 @@
 #
 # Things this file CANNOT restore automatically (review separately):
 #   * Tailscale login / device key
-#   * Docker Desktop login + WSL distro internals (use chezmoi inside the distro)
+#   * Docker Desktop login + WSL distro internals (manage with stow inside the distro)
 #   * SSH keys, GPG keys, Keeper / 1Password sessions
 #   * Microsoft / Apple / Google / GitHub account sign-ins
 #   * Windows Hello (face / fingerprint enrollment)
@@ -446,7 +446,7 @@ properties:
     # =========================================================================
     # WSL — install Ubuntu (default), keep Ubuntu-Test as a scratch distro,
     # and write the host-side ~/.wslconfig.
-    # The internal contents of each distro are managed by chezmoi inside WSL.
+    # The internal contents of each distro are managed by stow inside WSL.
     # =========================================================================
     - resource: PSDscResources/Script
       id: wslInstallUbuntu
@@ -651,7 +651,7 @@ properties:
     # =========================================================================
     # 1. Sign in: Microsoft account, GitHub (`gh auth login`), Tailscale, Keeper, Signal, Teams, OneDrive, Docker Hub.
     # 2. SSH / GPG: copy ~/.ssh and ~/.config/git/allowed_signers from your backup.
-    # 3. Inside each WSL distro: clone the dotfiles repo and `stow .` (or run chezmoi).
+    # 3. Inside each WSL distro: clone the dotfiles repo and `stow .`.
     # 4. Windows Terminal: settings.json is already restored once you sign into MS account + WT roams settings; otherwise drop your saved settings.json into:
     #    %LOCALAPPDATA%\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json
     # 5. Re-pin taskbar items and restore Start menu layout manually.
