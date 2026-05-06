@@ -1,0 +1,28 @@
+# Per-machine overrides — sourced last by .zshrc when present.
+#
+# To use:
+#   cp $ZDOTDIR/.zshrc.local.example $ZDOTDIR/.zshrc.local
+#
+# .zshrc.local is gitignored (.gitignore entry: zshrc/.zshrc.local), so
+# this is the place for anything you don't want in a public repo:
+#   - Secrets / API keys
+#   - Work-only or machine-only PATH entries
+#   - Tweaks specific to one host
+
+# ---- Secrets ---------------------------------------------------------------
+# Inline — simple, but plaintext on disk in ~/.config/zshrc/:
+# export GITHUB_TOKEN=...
+# export OPENAI_API_KEY=...
+# export ANTHROPIC_API_KEY=...
+
+# From a password manager on demand (recommended — never on disk):
+# command -v op   &>/dev/null && export GITHUB_TOKEN=$(op read "op://Personal/GitHub/token" 2>/dev/null)
+# command -v pass &>/dev/null && export OPENAI_API_KEY=$(pass show api/openai 2>/dev/null)
+
+# ---- Per-machine PATH ------------------------------------------------------
+# path=("$HOME/work/bin" $path)
+# typeset -U path PATH
+
+# ---- Work-only aliases / functions -----------------------------------------
+# alias deploy-prod='./scripts/deploy.sh production'
+# alias vpn-on='sudo wg-quick up work'
