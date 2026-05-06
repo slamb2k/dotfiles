@@ -238,7 +238,7 @@ fi
 # -----------------------------------------------------------------------------
 section 'bun globals'
 BUN_GLOBALS=(
-  @google/clasp @steipete/bird clawdhub happy-dom markdown-pdf
+  @google/clasp @openai/codex @steipete/bird clawdhub happy-dom markdown-pdf
   marked mcporter md-to-pdf pdfkit playwright puppeteer-core
 )
 if ! command -v bun &>/dev/null; then

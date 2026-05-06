@@ -209,6 +209,11 @@ properties:
       settings: { id: Anthropic.Claude, source: winget, installMode: silent }
 
     - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: pkgCodex
+      directives: { description: OpenAI Codex CLI, allowPrerelease: true }
+      settings: { id: OpenAI.Codex, source: winget, installMode: silent }
+
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
       id: pkgGsudo
       directives: { description: gsudo (sudo for Windows), allowPrerelease: true }
       settings: { id: gerardog.gsudo, source: winget, installMode: silent }
