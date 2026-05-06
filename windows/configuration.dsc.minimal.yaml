@@ -1,0 +1,141 @@
+# yaml-language-server: $schema=https://aka.ms/configuration-dsc-schema/0.2
+#
+# Minimal DSC manifest for SANDBOX iteration testing.
+#
+# Goal: validate the WinGet/DSC plumbing and the WSL handoff *without* installing
+# 50+ GUI apps, redists, etc. Should complete inside Windows Sandbox in 3–5 min.
+#
+# Selected by setting   $env:DOTFILES_PROFILE = 'minimal'   in the .wsb.
+# Use the full ./configuration.dsc.yaml for real machine restoration.
+#
+# Covers:
+#   * OS version assertion
+#   * WSL + Virtual Machine Platform optional features
+#   * Developer mode + long-path support (quick smoke test of the developer settings codepath)
+#   * Core CLI: Git, PowerShell 7, Windows Terminal, WSL store edition
+#   * Ubuntu install + .wslconfig writer
+#
+properties:
+  configurationVersion: 0.2.0
+
+  assertions:
+    - resource: Microsoft.Windows.Developer/OsVersion
+      id: minOs
+      directives:
+        description: Require Windows 11 22000 or newer
+        allowPrerelease: true
+      settings:
+        MinVersion: '10.0.22000'
+
+  resources:
+
+    # =========================================================================
+    # Windows optional features (WSL stack)
+    # =========================================================================
+    - resource: PSDscResources/WindowsOptionalFeature
+      id: featureWSL
+      directives:
+        description: Enable Windows Subsystem for Linux
+        allowPrerelease: true
+      settings:
+        Name: Microsoft-Windows-Subsystem-Linux
+        Ensure: Present
+
+    - resource: PSDscResources/WindowsOptionalFeature
+      id: featureVMP
+      directives:
+        description: Enable Virtual Machine Platform (required for WSL2)
+        allowPrerelease: true
+      settings:
+        Name: VirtualMachinePlatform
+        Ensure: Present
+
+    # =========================================================================
+    # Developer settings (quick toggles — verify this codepath works)
+    # =========================================================================
+    - resource: Microsoft.Windows.Developer/DeveloperMode
+      id: devMode
+      directives:
+        description: Enable Developer Mode
+        allowPrerelease: true
+      settings:
+        Ensure: Present
+
+    - resource: Microsoft.Windows.Developer/EnableLongPathSupport
+      id: longPaths
+      directives:
+        description: Enable Win32 long-path support (>260 chars)
+        allowPrerelease: true
+      settings:
+        Ensure: Present
+
+    # =========================================================================
+    # WinGet packages — the bare minimum to host setup.sh testing
+    # =========================================================================
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: pkgGit
+      directives: { description: Git for Windows, allowPrerelease: true }
+      settings: { id: Git.Git, source: winget }
+
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: pkgPwsh
+      directives: { description: PowerShell 7+, allowPrerelease: true }
+      settings: { id: Microsoft.PowerShell, source: winget }
+
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: pkgWindowsTerminal
+      directives: { description: Windows Terminal (so the Ubuntu profile is launchable), allowPrerelease: true }
+      settings: { id: Microsoft.WindowsTerminal, source: winget }
+
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: pkgWSL
+      directives: { description: WSL (Store edition), allowPrerelease: true }
+      settings: { id: Microsoft.WSL, source: winget }
+
+    # =========================================================================
+    # WSL distro install + config
+    # =========================================================================
+    - resource: PSDscResources/Script
+      id: wslInstallUbuntu
+      directives:
+        description: Install the default Ubuntu WSL distro (no auto-launch)
+        allowPrerelease: true
+      dependsOn:
+        - featureWSL
+        - featureVMP
+        - pkgWSL
+      settings:
+        GetScript: |
+          $list = & wsl.exe --list --quiet 2>$null
+          return @{ Result = ($list -join ',') }
+        TestScript: |
+          $list = & wsl.exe --list --quiet 2>$null
+          return ($list -match '^Ubuntu$').Count -gt 0
+        SetScript: |
+          & wsl.exe --install -d Ubuntu --no-launch
+
+    - resource: PSDscResources/Script
+      id: wslConfigFile
+      directives:
+        description: Write %UserProfile%\.wslconfig (mirrored networking, 8 GB cap)
+        allowPrerelease: true
+      settings:
+        GetScript: |
+          $p = Join-Path $env:USERPROFILE '.wslconfig'
+          return @{ Result = (Test-Path $p) }
+        TestScript: |
+          $p = Join-Path $env:USERPROFILE '.wslconfig'
+          if (-not (Test-Path $p)) { return $false }
+          (Get-Content $p -Raw) -match 'networkingMode=mirrored' -and `
+          (Get-Content $p -Raw) -match 'memory=8GB'
+        SetScript: |
+          $lines = @(
+            '[wsl2]',
+            'memory=8GB',
+            'networkingMode=mirrored',
+            'dnsTunneling=true',
+            'autoProxy=true',
+            'firewall=true'
+          )
+          $p = Join-Path $env:USERPROFILE '.wslconfig'
+          Set-Content -Path $p -Value $lines -Encoding UTF8

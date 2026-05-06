@@ -1,0 +1,26 @@
+<Configuration>
+  <!--
+    Windows Sandbox config for testing ~/dotfiles/setup.ps1 (and, downstream,
+    setup.sh inside the WSL Ubuntu the DSC installs).
+
+    Usage:
+      1. Copy this .wsb to a Windows-side path (e.g. your Desktop), or open
+         File Explorer at \\wsl.localhost\Ubuntu\home\slamb2k\dotfiles\windows\sandbox\
+         and double-click it.
+      2. Sandbox boots, runs bootstrap.ps1 (fetched from main on GitHub), which:
+           - installs winget + deps
+           - downloads dotfiles repo zip to C:\dotfiles
+           - runs `winget configure` against configuration.dsc.yaml
+      3. After WSL/Ubuntu installs, open the Ubuntu profile in Terminal
+         (inside the sandbox) and run:  cd ~/dotfiles && ./setup.sh
+      4. Close the sandbox to throw everything away. Reopen the .wsb to retest.
+  -->
+  <Networking>Default</Networking>
+  <vGPU>Disable</vGPU>
+  <MemoryInMB>16384</MemoryInMB>
+  <ClipboardRedirection>true</ClipboardRedirection>
+  <ProtectedClient>false</ProtectedClient>
+  <LogonCommand>
+    <Command>powershell.exe -ExecutionPolicy Bypass -NoExit -Command "iwr -UseBasicParsing https://raw.githubusercontent.com/slamb2k/dotfiles/main/windows/sandbox/bootstrap.ps1 | iex"</Command>
+  </LogonCommand>
+</Configuration>

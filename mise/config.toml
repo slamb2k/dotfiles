@@ -1,0 +1,6 @@
+[tools]
+node = "lts"
+python = "3.13"
+bun = "latest"
+go = "1.24"
+

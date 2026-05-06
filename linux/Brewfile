@@ -1,0 +1,184 @@
+# =============================================================================
+# Linux Brewfile — WSL2 Ubuntu (24.04) dev box restoration
+# =============================================================================
+#
+# Usage:
+#   1. Install Homebrew on Linux (one-liner):
+#        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+#      Then add to PATH (the installer prints the exact lines for ~/.zprofile):
+#        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+#   2. From this directory:    brew bundle --file=./Brewfile
+#
+# Linuxbrew has no `cask` support (skip mac-only entries here).
+# Anything that *must* come from apt / a vendor repo / curl-bash lives in the
+# "Non-brew installs" comment block at the bottom — that section is an executable
+# checklist, not part of the Brewfile DSL.
+#
+# Generated 2026-05-06 by inspecting the live machine. Over-populated on
+# purpose; trim what you don't actually use.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Taps
+# -----------------------------------------------------------------------------
+# tap "anthropics/claude"        # Reserved for an official Anthropic tap if/when it exists
+tap "hashicorp/tap"              # terraform, vault, packer, consul
+tap "oven-sh/bun"                # bun runtime
+
+# =============================================================================
+# Core CLI (cross-platform parity with the macOS Brewfile)
+# =============================================================================
+brew "git"
+brew "gh"                        # GitHub CLI
+brew "act"                       # GitHub Actions workflows locally in Docker
+brew "ripgrep"                   # rg
+brew "fd"                        # fd-find without the rename dance
+brew "fzf"
+brew "bat"                       # cat replacement; brew avoids the "batcat" rename
+brew "eza"                       # ls replacement (currently MISSING on this box)
+brew "zoxide"                    # smarter cd
+brew "jq"
+brew "yq"                        # YAML/JSON/XML query (currently MISSING)
+brew "tree"                      # currently MISSING
+brew "tldr"                      # quick man-page replacement
+
+# =============================================================================
+# Modern Unix replacements / system inspection
+# =============================================================================
+brew "htop"
+brew "btop"                      # nicer top
+brew "dust"                      # du replacement
+brew "procs"                     # ps replacement
+brew "duf"                       # df replacement
+brew "hyperfine"                 # benchmark
+brew "watch"
+brew "lsof"
+brew "pstree"
+brew "ncdu"
+
+# =============================================================================
+# Editors / terminals / multiplexers
+# =============================================================================
+brew "neovim"                    # currently MISSING (apt has older)
+brew "tmux"
+
+# =============================================================================
+# Shell / prompt / history
+# =============================================================================
+brew "starship"                  # currently in /usr/local/bin (manual install)
+brew "atuin"                     # shell-history sync (currently MISSING)
+brew "direnv"                    # .envrc per-dir env (referenced by .zshrc, currently MISSING)
+brew "fzf"                       # already above; left for grep-friendly visibility
+
+# =============================================================================
+# Language runtime managers
+# =============================================================================
+brew "mise"                      # currently MISSING — the macOS canonical choice
+brew "uv"                        # already at ~/.local/bin (manual)
+
+# =============================================================================
+# Python tooling (uv handles most, but a few extras are useful)
+# =============================================================================
+brew "ruff"                      # fast python linter
+# brew "pipx"                    # for one-off CLI tools outside uv
+# brew "poetry"                  # if you still use poetry projects
+
+# =============================================================================
+# Cloud / infra / IaC
+# =============================================================================
+brew "azure-cli"                 # `az`
+brew "kubernetes-cli"            # `kubectl` (currently /usr/local/bin manual)
+brew "kubectx"                   # kubectx + kubens
+brew "k9s"                       # TUI for kubernetes
+brew "helm"
+brew "stern"                     # multi-pod log tail
+brew "hashicorp/tap/terraform"
+# brew "awscli"                  # uncomment if AWS-side work
+# brew "google-cloud-sdk"        # uncomment if GCP-side work
+
+# =============================================================================
+# Container / Docker tooling (Docker Engine itself is apt — see bottom)
+# =============================================================================
+brew "lazygit"                   # currently MISSING
+brew "lazydocker"                # currently MISSING
+brew "ctop"                      # top for containers
+brew "dive"                      # explore image layers
+
+# =============================================================================
+# Git workflow / supplements
+# =============================================================================
+brew "git-delta"                 # better git diff (`delta`)
+brew "git-lfs"
+brew "gitleaks"                  # secret scanner
+brew "gh-dash"                   # gh extension wrapper (config dir exists)
+brew "pre-commit"
+
+# =============================================================================
+# Networking / transfer / API tooling
+# =============================================================================
+brew "curl"                      # newer than apt
+brew "wget"
+brew "httpie"                    # `http`
+brew "xh"                        # rust-based curl/httpie hybrid
+brew "rsync"
+brew "openssh"                   # newer client than apt
+brew "mtr"
+brew "mosh"
+brew "nmap"
+brew "iperf3"
+brew "cloudflared"               # cloudflare tunnel client
+
+# =============================================================================
+# Crypto / security
+# =============================================================================
+brew "age"                       # already at ~/.local/bin (manual binary)
+brew "sops"                      # mozilla secrets ops
+brew "gnupg"                     # apt has it; brew is fine too
+brew "openssl@3"
+
+# =============================================================================
+# Dotfiles / templating / config
+# =============================================================================
+brew "stow"                      # README uses this
+
+# =============================================================================
+# PowerShell + Microsoft tooling on Linux
+# =============================================================================
+# brew "powershell"              # not available on linuxbrew; install via apt — see bottom
+
+# =============================================================================
+# Markdown / docs / CLI eye-candy
+# =============================================================================
+brew "glow"                      # markdown viewer
+brew "gum"                       # charm CLI components
+brew "pandoc"                    # multi-format converter
+brew "graphviz"                  # `dot` for diagram rendering
+
+# =============================================================================
+# Media / image tooling (used by playwright/puppeteer scripts in this repo)
+# =============================================================================
+brew "ffmpeg"                    # currently MISSING
+brew "imagemagick"
+brew "yt-dlp"
+
+# =============================================================================
+# Misc useful CLIs
+# =============================================================================
+brew "make"
+brew "cmake"
+brew "pkg-config"
+brew "tokei"                     # source-code line counter
+brew "shellcheck"                # bash linter (apt has it too)
+brew "shfmt"                     # bash formatter
+brew "bats-core"                 # already 'bats' via apt; brew variant is current
+
+# =============================================================================
+# Rust toolchain & Go (mise can manage these too — pick one path)
+# =============================================================================
+brew "rustup-init"               # install rustup, then `rustup default stable`
+brew "go"                        # provides go itself
+
+# =============================================================================
+# DSC / SOPs (extras)
+# =============================================================================
+# brew "1password-cli"           # if 1Password is part of your secrets flow
