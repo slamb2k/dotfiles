@@ -138,6 +138,11 @@ else
   MISE_NODE_VERIFY=false mise install
 fi
 
+# Make tools installed under $HOME visible to the rest of this script:
+#   - mise shims expose bun/node/python/go (for the bun + playwright sections)
+#   - ~/.local/bin holds claude (Claude Code installer drops it here)
+export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
+
 # =============================================================================
 # Non-brew installs
 # =============================================================================
