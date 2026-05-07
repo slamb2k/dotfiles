@@ -12,3 +12,6 @@
 # Platform-specific installer payloads, not Linux configs
 --ignore=^linux$
 --ignore=^windows$
+
+# Home-targeted package — handled separately in setup.sh
+--ignore=^claude$
