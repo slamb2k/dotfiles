@@ -1,0 +1,5 @@
+# ~/.config/git/allowed_signers — SSH signing verification.
+# One line per <committer-email> <ssh-key-type> <public-key>.
+# Both Windows and WSL now share the same ed25519 key (slamb2k@github).
+
+me@simonlamb.codes ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFY3o63AgNbEcQdYI2bKbMgmnCFhTWqPB6M/2f7WN/K9

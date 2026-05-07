@@ -1,0 +1,82 @@
+# Global gitignore — applies across all repos.
+# Machine/OS artefacts, editor noise, language caches.
+# Per-repo .gitignore still wins where it conflicts.
+
+# --- OS ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# --- Editor / IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*~
+.netrwhist
+.nvimlog
+
+# --- Env / secrets ---
+.env
+.env.*
+!.env.example
+!.env.sample
+.envrc.local
+.direnv/
+.aider.chat.history.md
+.aider.input.history
+.aider.tags.cache.v3/
+
+# --- Logs ---
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+.venv/
+venv/
+.python-version
+
+# --- Node ---
+node_modules/
+.npm/
+.yarn/
+.pnpm-store/
+.bun/
+
+# --- Build output ---
+dist/
+build/
+out/
+target/
+*.o
+*.so
+
+# --- Claude / AI tool artefacts that leak into working trees ---
+.claude/
+.claude-mem/
+.codex/
+.copilot/
+.cursor/
+.gemini/
+CLAUDE.md.backup

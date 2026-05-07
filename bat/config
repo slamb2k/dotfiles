@@ -1,0 +1,13 @@
+# ~/.config/bat/config
+
+--theme="ansi"
+--style="numbers,changes,header"
+--paging=auto
+--italic-text=always
+
+--map-syntax "*.jsonc:JSON"
+--map-syntax ".env*:Bash"
+--map-syntax ".gitignore:Git Ignore"
+--map-syntax "Dockerfile*:Dockerfile"
+--map-syntax "*.tfvars:Terraform"
+--map-syntax "CLAUDE.md:Markdown"

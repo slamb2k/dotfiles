@@ -4,11 +4,12 @@
 # Restore the WSL/Linux side of the dev box, or check it for drift.
 #
 # Usage:
-#   ./setup.sh              # apply everything (real run)
-#   ./setup.sh --dry-run    # show what would change, make no modifications
-#   ./setup.sh --check      # detect untracked dev tools / configs / broken symlinks
-#   ./setup.sh --check -q   # one-line drift summary (silent when clean)
-#   ./setup.sh -h           # this help text
+#   ./setup.sh                 # apply everything (real run)
+#   ./setup.sh --dry-run       # show what would change, make no modifications
+#   ./setup.sh --check         # detect untracked dev tools / configs / broken symlinks
+#   ./setup.sh --check -q      # one-line drift summary (silent when clean)
+#   ./setup.sh --check --fix   # interactive drift resolution (per-item prompts)
+#   ./setup.sh -h              # this help text
 #
 # Idempotent. Safe to re-run.
 set -euo pipefail
@@ -19,15 +20,25 @@ set -euo pipefail
 DRY_RUN=
 CHECK=
 QUIET=
+FIX=
 for arg in "$@"; do
   case $arg in
     -n|--dry-run) DRY_RUN=1 ;;
     -c|--check)   CHECK=1 ;;
     -q|--quiet)   QUIET=1 ;;
-    -h|--help)    sed -n '2,13p' "$0"; exit 0 ;;
+    --fix)        FIX=1 ;;
+    -h|--help)    sed -n '2,14p' "$0"; exit 0 ;;
     *) echo "Unknown arg: $arg" >&2; exit 1 ;;
   esac
 done
+
+# Sanity: --fix is interactive and requires --check.
+if [[ -n $FIX && -z $CHECK ]]; then
+  echo "Error: --fix requires --check" >&2; exit 1
+fi
+if [[ -n $FIX && -n $QUIET ]]; then
+  echo "Error: --fix is interactive — cannot combine with --quiet" >&2; exit 1
+fi
 
 section() {
   if [[ -n $DRY_RUN ]]; then printf "\n[dry-run] === %s ===\n" "$1"
@@ -78,29 +89,49 @@ install_apt_repo() {
 # Drift detection (run via --check). Compares the live machine against the
 # manifests in this repo (Brewfile, BUN_GLOBALS, UV_TOOLS, GH_EXTENSIONS, stow
 # packages, claude config symlinks, dotfiles repo state).
+#
+# With --check --fix, walks each drift item interactively and offers
+# type-specific actions (track in manifest, uninstall, stow, adopt, ignore).
 # -----------------------------------------------------------------------------
 REPO=$(cd "$(dirname "$0")" && pwd)
+
+# Colors (TTY only) — used by both check and fix
+C_RESET= C_BOLD= C_DIM= C_RED= C_GREEN= C_YELLOW= C_CYAN=
+if [[ -t 1 ]]; then
+  C_RESET=$'\033[0m'
+  C_BOLD=$'\033[1m'
+  C_DIM=$'\033[2m'
+  C_RED=$'\033[31m'
+  C_GREEN=$'\033[32m'
+  C_YELLOW=$'\033[33m'
+  C_CYAN=$'\033[36m'
+fi
+
+# Drift collectors — populated by run_drift_check, consumed by run_drift_fix.
+DRIFT_BREW=() DRIFT_BUN=() DRIFT_UV=() DRIFT_GH=()
+DRIFT_UNSTOWED=()        # entries: "name|state"  state ∈ {missing,real-path,symlink-elsewhere}
+DRIFT_CLAUDE_SYMLINK=()  # entries: "rel|state"   state ∈ {missing,real-file,symlink-elsewhere}
+DRIFT_ADOPT=()           # entries: "skills/foo"
+DRIFT_CONFIG_DIRS=()     # entries: "name"         (untracked ~/.config/<name>)
+DRIFT_UNCOMMITTED_COUNT=0
+DRIFT_UNPUSHED_COUNT=0
+
+# Section registry — populated at run_drift_fix start in the order sections will
+# run. Each fix_X bumps CURRENT_SECTION_IDX and updates SECTION_STATUS so the
+# rolling list above the body shows progress (▶ current · ☑ done · ⏸ skipped).
+SECTION_EMOJIS=()
+SECTION_TITLES=()
+SECTION_STATUS=()  # pending | current | done | skipped
+CURRENT_SECTION_IDX=-1
 
 run_drift_check() {
   local NOT_STOW_PACKAGES='^(linux|windows|atuin|claude|README\.md|install\.(sh|ps1)|setup\.(sh|ps1)|test\.ps1|\.stowrc|\.gitignore|\.git)$'
   local DRIFT_LINES=()
   local TOTAL_DRIFT=0
 
-  # Colors (only when stdout is a TTY)
-  local C_RESET= C_BOLD= C_DIM= C_RED= C_GREEN= C_YELLOW= C_CYAN=
-  if [[ -t 1 ]]; then
-    C_RESET=$'\033[0m'
-    C_BOLD=$'\033[1m'
-    C_DIM=$'\033[2m'
-    C_RED=$'\033[31m'
-    C_GREEN=$'\033[32m'
-    C_YELLOW=$'\033[33m'
-    C_CYAN=$'\033[36m'
-  fi
-
   # drift_section <title> <count> <body> [emoji] [color]
   drift_section() {
-    local title=$1 count=$2 body=$3 emoji=${4:-⚠} color=${5:-$C_YELLOW}
+    local title=$1 count=$2 body=$3 emoji=${4:-⚠️} color=${5:-$C_YELLOW}
     [[ $count -eq 0 ]] && return 0
     TOTAL_DRIFT=$((TOTAL_DRIFT + count))
     DRIFT_LINES+=("$count $title")
@@ -135,6 +166,7 @@ run_drift_check() {
     tracked=$(awk -F'"' '/^brew "/ {print $2}' "$REPO/linux/Brewfile" \
               | awk -F/ '{print $NF}' | sort -u)
     drift=$(comm -23 <(echo "$installed") <(echo "$tracked") || true)
+    [[ -n $drift ]] && while IFS= read -r p; do DRIFT_BREW+=("$p"); done <<< "$drift"
     drift_section "brew packages not in Brewfile" "$(count_lines "$drift")" "$drift" "📦" "$C_YELLOW"
   fi
 
@@ -145,6 +177,7 @@ run_drift_check() {
                 | sed -nE 's/^[├└]── (@?[^@]+)@.*/\1/p' | sort -u)
     tracked=$(extract_array BUN_GLOBALS)
     drift=$(comm -23 <(echo "$installed") <(echo "$tracked") || true)
+    [[ -n $drift ]] && while IFS= read -r p; do DRIFT_BUN+=("$p"); done <<< "$drift"
     drift_section "bun globals not in BUN_GLOBALS" "$(count_lines "$drift")" "$drift" "🥟" "$C_YELLOW"
   fi
 
@@ -155,6 +188,7 @@ run_drift_check() {
                 | awk '/^[a-zA-Z]/ {print $1}' | sort -u)
     tracked=$(extract_array UV_TOOLS)
     drift=$(comm -23 <(echo "$installed") <(echo "$tracked") || true)
+    [[ -n $drift ]] && while IFS= read -r p; do DRIFT_UV+=("$p"); done <<< "$drift"
     drift_section "uv tools not in UV_TOOLS" "$(count_lines "$drift")" "$drift" "🐍" "$C_YELLOW"
   fi
 
@@ -166,6 +200,7 @@ run_drift_check() {
                 | sort -u)
     tracked=$(extract_array GH_EXTENSIONS)
     drift=$(comm -23 <(echo "$installed") <(echo "$tracked") || true)
+    [[ -n $drift ]] && while IFS= read -r p; do DRIFT_GH+=("$p"); done <<< "$drift"
     drift_section "gh extensions not in GH_EXTENSIONS" "$(count_lines "$drift")" "$drift" "🐙" "$C_YELLOW"
   fi
 
@@ -178,10 +213,13 @@ run_drift_check() {
     if [[ -L $target ]]; then
       [[ "$(readlink -f "$target")" == "$entry" ]] && continue
       unstowed+="$name (symlink points elsewhere)"$'\n'
+      DRIFT_UNSTOWED+=("$name|symlink-elsewhere")
     elif [[ -e $target ]]; then
       unstowed+="$name (real path at ~/.config/$name — use \`stow --adopt $name\`)"$'\n'
+      DRIFT_UNSTOWED+=("$name|real-path")
     else
       unstowed+="$name (not stowed — run \`cd ~/dotfiles && stow $name\`)"$'\n'
+      DRIFT_UNSTOWED+=("$name|missing")
     fi
   done
   unstowed=${unstowed%$'\n'}
@@ -197,10 +235,13 @@ run_drift_check() {
       if [[ -L $target ]]; then
         [[ "$(readlink -f "$target")" == "$(readlink -f "$f")" ]] && continue
         claude_drift+="$rel (symlink points elsewhere)"$'\n'
+        DRIFT_CLAUDE_SYMLINK+=("$rel|symlink-elsewhere")
       elif [[ -e $target ]]; then
         claude_drift+="$rel (real file — atomic write replaced symlink; mv into package + restow)"$'\n'
+        DRIFT_CLAUDE_SYMLINK+=("$rel|real-file")
       else
         claude_drift+="$rel (missing — run \`cd ~/dotfiles && stow --target=\$HOME -d ~/dotfiles claude\`)"$'\n'
+        DRIFT_CLAUDE_SYMLINK+=("$rel|missing")
       fi
     done < <(find "$REPO/claude/.claude" -type f -print0)
   fi
@@ -239,6 +280,7 @@ run_drift_check() {
       # Dismissed via .adopt-ignore?
       is_ignored "$sub/$name" && continue
       adopt_candidates+="$sub/$name"$'\n'
+      DRIFT_ADOPT+=("$sub/$name")
     done
   done
   adopt_candidates=${adopt_candidates%$'\n'}
@@ -247,12 +289,26 @@ run_drift_check() {
 
   # 8. Real (non-symlink) dirs in ~/.config with no matching dotfiles entry.
   #    Capped at 10 — there's always a long tail of app-default configs.
+  #    Filterable via ~/dotfiles/.config-ignore (one name or glob per line).
+  local CONFIG_IGNORE_FILE="$REPO/.config-ignore"
+  is_config_ignored() {
+    [[ -f $CONFIG_IGNORE_FILE ]] || return 1
+    local name=$1 pattern
+    while IFS= read -r pattern; do
+      [[ -z $pattern || $pattern == \#* ]] && continue
+      # shellcheck disable=SC2053
+      [[ $name == $pattern ]] && return 0
+    done < "$CONFIG_IGNORE_FILE"
+    return 1
+  }
   local candidates="" count=0
   for d in "$HOME"/.config/*/; do
     [[ -L ${d%/} ]] && continue
     local name; name=$(basename "$d")
     [[ -e "$REPO/$name" ]] && continue
+    is_config_ignored "$name" && continue
     candidates+="$name"$'\n'
+    DRIFT_CONFIG_DIRS+=("$name")
     count=$((count + 1))
     [[ $count -ge 10 ]] && break
   done
@@ -262,9 +318,19 @@ run_drift_check() {
   # 9. Uncommitted changes in the dotfiles repo working tree
   if [[ -d $REPO/.git ]]; then
     local porcelain
-    porcelain=$(git -C "$REPO" status --porcelain 2>/dev/null | head -20)
-    [[ -n $porcelain ]] && drift_section "uncommitted dotfiles changes (run \`cd ~/dotfiles && git status\`)" \
-      "$(count_lines "$porcelain")" "$porcelain" "📝" "$C_YELLOW"
+    # Collapse git's two-char XY status to a single status character —
+    # prefer the working-tree side, fall back to the index side. So
+    # " M setup.sh", "M  setup.sh", and "MM setup.sh" all render as "M setup.sh".
+    porcelain=$(git -C "$REPO" status --porcelain 2>/dev/null | head -20 | awk '{
+      x = substr($0,1,1); y = substr($0,2,1)
+      c = (y != " ") ? y : x
+      print c " " substr($0,4)
+    }')
+    if [[ -n $porcelain ]]; then
+      DRIFT_UNCOMMITTED_COUNT=$(count_lines "$porcelain")
+      drift_section "uncommitted dotfiles changes (run \`cd ~/dotfiles && git status\`)" \
+        "$DRIFT_UNCOMMITTED_COUNT" "$porcelain" "📝" "$C_YELLOW"
+    fi
 
     # 10. Local commits not yet pushed to origin
     if git -C "$REPO" rev-parse --abbrev-ref '@{u}' &>/dev/null; then
@@ -272,6 +338,7 @@ run_drift_check() {
       ahead=$(git -C "$REPO" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)
       if [[ $ahead -gt 0 ]]; then
         ahead_log=$(git -C "$REPO" log --oneline '@{u}..HEAD' 2>/dev/null)
+        DRIFT_UNPUSHED_COUNT=$ahead
         drift_section "unpushed dotfiles commits (run \`cd ~/dotfiles && git push\`)" \
           "$ahead" "$ahead_log" "📤" "$C_YELLOW"
       fi
@@ -287,17 +354,402 @@ run_drift_check() {
     local summary
     printf -v summary '%s, ' "${DRIFT_LINES[@]}"
     summary=${summary%, }
-    printf "%s⚠ [dotfiles drift]%s %s — run \`~/dotfiles/setup.sh --check\` for details\n" \
+    printf "%s⚠️ [dotfiles drift]%s %s — run \`~/dotfiles/setup.sh --check\` for details\n" \
       "$C_YELLOW" "$C_RESET" "$summary"
   else
-    printf "\n%s%s⚠ %d total drift item(s) found.%s\n" "$C_BOLD" "$C_YELLOW" "$TOTAL_DRIFT" "$C_RESET"
+    printf "\n%s%s⚠️ %d total drift item(s) found.%s\n" "$C_BOLD" "$C_YELLOW" "$TOTAL_DRIFT" "$C_RESET"
   fi
   return 1
 }
 
-# Short-circuit: --check runs the drift report and exits without installing anything.
+# -----------------------------------------------------------------------------
+# Interactive drift fix mode (run via --check --fix). Per drift type, opens
+# fzf with all items: ↑↓ to navigate, Tab to multi-select, Enter applies the
+# default action to selected items, Ctrl-X applies the alternative action,
+# Esc skips the type. Requires fzf.
+# -----------------------------------------------------------------------------
+say_ok()   { printf "    %s✓️ %s%s\n" "$C_GREEN"  "$*" "$C_RESET"; }
+say_dim()  { printf "    %s%s%s\n"   "$C_DIM"    "$*" "$C_RESET"; }
+say_warn() { printf "    %s⚠️ %s%s\n" "$C_YELLOW" "$*" "$C_RESET"; }
+
+# Draw a dim horizontal rule that fills the terminal width.
+draw_rule() {
+  local w; w=${COLUMNS:-$(tput cols 2>/dev/null || echo 80)}
+  [[ -z $w || $w -lt 1 ]] && w=80
+  local r; printf -v r '─%.0s' $(seq 1 "$w")
+  printf "%s%s%s\n" "$C_DIM" "$r" "$C_RESET"
+}
+
+# Print the boxed "Interactive fix mode" sign — the top of the persistent
+# header that stays in place while sections rotate below.
+print_sign() {
+  printf "%s┌─────────────────────────┐%s\n" "$C_BOLD" "$C_RESET"
+  printf "%s│ 🔧 Interactive fix mode │%s\n" "$C_BOLD" "$C_RESET"
+  printf "%s└─────────────────────────┘%s\n" "$C_BOLD" "$C_RESET"
+}
+
+# Append a section to the registry. Order here determines the order of the
+# rolling status list and must match the call order of fix_section/fix_*.
+register_section() {
+  SECTION_EMOJIS+=("$1")
+  SECTION_TITLES+=("$2")
+  SECTION_STATUS+=("pending")
+}
+
+# Print the per-section status list shown above the active section's body.
+render_section_list() {
+  local i status title
+  for i in "${!SECTION_TITLES[@]}"; do
+    status=${SECTION_STATUS[$i]}
+    title=${SECTION_TITLES[$i]}
+    case $status in
+      current) printf " 👉 %s\n" "$title" ;;
+      done)    printf " ✔️ %s\n" "$title" ;;
+      skipped) printf " ❌ %s. %s(skipped)%s\n" "$title" "$C_DIM" "$C_RESET" ;;
+      *)       printf " 🔹 %s\n" "$title" ;;
+    esac
+  done
+}
+
+# Restore cursor to the position saved after the sign was printed and erase to
+# end-of-screen. Everything above the cursor (drift report + sign) stays put;
+# everything below is wiped so the next section can paint from a clean canvas.
+reset_body() {
+  tput rc 2>/dev/null || printf '\033[u'
+  tput ed 2>/dev/null || printf '\033[J'
+}
+
+# Begin a new section: bump the index, mark this entry current, repaint the body.
+begin_section() {
+  CURRENT_SECTION_IDX=$((CURRENT_SECTION_IDX + 1))
+  SECTION_STATUS[$CURRENT_SECTION_IDX]="current"
+  reset_body
+  render_section_list
+  printf "\n"
+}
+
+# Insert a new entry into a bash array literal in setup.sh (single- or multi-line).
+add_to_array() {
+  local array_name=$1 item=$2 file="$REPO/setup.sh"
+  local tmp; tmp=$(mktemp)
+  awk -v name="$array_name" -v item="$item" '
+    BEGIN { inarr = 0 }
+    !inarr && $0 ~ "^" name "=\\(" {
+      if ($0 ~ /\)[[:space:]]*$/) {
+        sub(/\)[[:space:]]*$/, " " item ")")
+        print; next
+      }
+      inarr = 1
+      print; next
+    }
+    inarr && /^\)/ {
+      print "  " item
+      inarr = 0
+      print; next
+    }
+    { print }
+  ' "$file" > "$tmp" && mv "$tmp" "$file"
+}
+
+add_to_brewfile() { printf 'brew "%s"\n' "$1" >> "$REPO/linux/Brewfile"; }
+
+# ----- action verbs (one per type × direction) -----
+do_brew_track()  { add_to_brewfile "$1" && say_ok "tracked $1"; }
+do_brew_remove() { brew uninstall "$1" 2>&1 | sed 's/^/    /' || say_warn "uninstall $1 failed"; }
+do_bun_track()   { add_to_array BUN_GLOBALS "$1" && say_ok "tracked $1"; }
+do_bun_remove()  { bun remove -g "$1" 2>&1 | sed 's/^/    /' || say_warn "remove $1 failed"; }
+do_uv_track()    { add_to_array UV_TOOLS "$1" && say_ok "tracked $1"; }
+do_uv_remove()   { uv tool uninstall "$1" 2>&1 | sed 's/^/    /' || say_warn "remove $1 failed"; }
+do_gh_track()    { add_to_array GH_EXTENSIONS "$1" && say_ok "tracked $1"; }
+do_gh_remove()   { gh extension remove "$1" 2>&1 | sed 's/^/    /' || say_warn "remove $1 failed"; }
+
+do_unstowed_fix() {
+  local entry=$1 name=${entry%%|*} state=${entry##*|}
+  case $state in
+    missing)           (cd "$REPO" && stow "$name") && say_ok "stowed $name" || say_warn "stow $name failed" ;;
+    real-path)         (cd "$REPO" && stow --adopt "$name") && say_ok "adopted $name (review with: cd ~/dotfiles && git diff)" || say_warn "adopt $name failed" ;;
+    symlink-elsewhere) rm -f "$HOME/.config/$name" && (cd "$REPO" && stow "$name") && say_ok "fixed $name" || say_warn "fix $name failed" ;;
+  esac
+}
+
+absorb_claude_file() {
+  local rel=$1
+  mkdir -p "$(dirname "$REPO/claude/.claude/$rel")"
+  mv "$HOME/.claude/$rel" "$REPO/claude/.claude/$rel" \
+    && stow --target="$HOME" -d "$REPO" claude \
+    && say_ok "absorbed claude/$rel" \
+    || say_warn "absorb claude/$rel failed"
+}
+
+do_claude_fix() {
+  local entry=$1 rel=${entry%%|*} state=${entry##*|}
+  case $state in
+    real-file)         absorb_claude_file "$rel" ;;
+    missing)           stow --target="$HOME" -d "$REPO" claude && say_ok "restowed claude/$rel" || say_warn "restow failed" ;;
+    symlink-elsewhere) rm -f "$HOME/.claude/$rel" && stow --target="$HOME" -d "$REPO" claude && say_ok "fixed claude/$rel" || say_warn "fix failed" ;;
+  esac
+}
+
+do_adopt() {
+  local path=$1 sub=${path%/*}
+  mkdir -p "$REPO/claude/.claude/$sub"
+  mv "$HOME/.claude/$path" "$REPO/claude/.claude/$path" \
+    && stow --target="$HOME" -d "$REPO" claude \
+    && say_ok "adopted $path" \
+    || say_warn "adopt $path failed"
+}
+
+do_adopt_ignore() {
+  printf "%s\n" "$1" >> "$REPO/.adopt-ignore"
+  say_ok "added $1 to .adopt-ignore"
+}
+
+do_config_adopt() {
+  local name=$1
+  # Whole-dir symlink convention (matches existing packages like zshrc).
+  # `stow` would create per-file symlinks at ~/.config/<file>, leaking
+  # the package's contents into ~/.config root.
+  mv "$HOME/.config/$name" "$REPO/$name" \
+    && ln -s "$REPO/$name" "$HOME/.config/$name" \
+    && say_ok "adopted $name (review with: cd ~/dotfiles && git diff)" \
+    || say_warn "adopt $name failed"
+}
+
+do_config_ignore() {
+  printf "%s\n" "$1" >> "$REPO/.config-ignore"
+  say_ok "added $1 to .config-ignore"
+}
+
+# y/n prompt for whole-section actions (not multi-select). Returns 0=yes, 1=no.
+prompt_yn() {
+  local prompt=$1 default=${2:-y} hint
+  if [[ $default == y ]]; then hint="[Y/n]"; else hint="[y/N]"; fi
+  printf "  %s %s%s%s " "$prompt" "$C_DIM" "$hint" "$C_RESET" >&2
+  local ans
+  read -r ans < /dev/tty
+  ans=${ans:-$default}
+  [[ ${ans,,} == y* ]]
+}
+
+fix_uncommitted() {
+  [[ $DRIFT_UNCOMMITTED_COUNT -eq 0 ]] && return 0
+  begin_section
+  printf "%s📝 Processing %d Uncommitted dotfiles changes%s\n" \
+    "$C_BOLD" "$DRIFT_UNCOMMITTED_COUNT" "$C_RESET"
+  draw_rule
+  printf "\n"
+
+  (cd "$REPO" && git -c color.status=always status) 2>&1 | sed 's/^/    /' | head -40
+
+  # Auto-generate the commit message from timestamp + a few changed paths.
+  # Take everything from column 4 of porcelain output to handle paths with
+  # spaces; cap the file list at 3 names with "+N more" for the long tail.
+  local stamp files
+  stamp=$(date '+%Y-%m-%d %H:%M')
+  files=$(cd "$REPO" && git status --porcelain 2>/dev/null \
+    | awk '{print substr($0,4)}' | head -3 | paste -sd, - | sed 's/,/, /g')
+  [[ $DRIFT_UNCOMMITTED_COUNT -gt 3 ]] \
+    && files="$files, +$((DRIFT_UNCOMMITTED_COUNT - 3)) more"
+  local msg="chore: drift sync $stamp — $files"
+  printf "  %sCommit message:%s %s\n" "$C_DIM" "$C_RESET" "$msg"
+
+  if prompt_yn "Commit and push changes?" n; then
+    if (cd "$REPO" && git add -A && git commit -m "$msg" && git push) 2>&1 | sed 's/^/    /'; then
+      say_ok "committed and pushed"
+    else
+      say_warn "commit or push failed — check output above"
+    fi
+    SECTION_STATUS[$CURRENT_SECTION_IDX]="done"
+  else
+    SECTION_STATUS[$CURRENT_SECTION_IDX]="skipped"
+  fi
+}
+
+fix_unpushed() {
+  [[ $DRIFT_UNPUSHED_COUNT -eq 0 ]] && return 0
+  begin_section
+  printf "%s📤 Processing %d Unpushed dotfiles commits%s\n" \
+    "$C_BOLD" "$DRIFT_UNPUSHED_COUNT" "$C_RESET"
+  draw_rule
+  printf "\n"
+
+  if prompt_yn "Run \`git push\`?" y; then
+    (cd "$REPO" && git push 2>&1) | sed 's/^/    /' || true
+    SECTION_STATUS[$CURRENT_SECTION_IDX]="done"
+  else
+    SECTION_STATUS[$CURRENT_SECTION_IDX]="skipped"
+  fi
+}
+
+# ----- fzf-driven multi-select picker -----
+# bulk_select <prompt> <default_label> <alt_key|""> <alt_label|""> -- <items...>
+# Echoes "default\n<items>" or "alt\n<items>" on confirm; nothing on Esc.
+# (No title — section title is already printed by fix_section above the picker.)
+bulk_select() {
+  local prompt=$1 default_label=$2 alt_key=$3 alt_label=$4
+  shift 4
+  [[ ${1:-} == "--" ]] && shift
+  local items=("$@")
+  [[ ${#items[@]} -eq 0 ]] && return 0
+
+  # Build hint, then print it OUTSIDE fzf so it sits at col 0 (above the
+  # picker area) with a blank line separating it from the items.
+  local hint expect_arg=()
+  if [[ -n $alt_key && -n $alt_label ]]; then
+    hint="↑↓ navigate · Tab multi-select · Enter ${default_label} · Ctrl-X ${alt_label} · Esc skip"
+    expect_arg=(--expect="$alt_key")
+  else
+    hint="↑↓ navigate · Tab multi-select · Enter ${default_label} · Esc skip"
+  fi
+  printf "%s%s%s\n" "$C_DIM" "$hint" "$C_RESET" >&2
+
+  # fzf gets only items. The default pointer slot gives them their 2-space
+  # visual indent (pointer at col 0, item text at col 2). --height=~ shrinks
+  # the picker to fit content for short lists.
+  local result rc=0
+  result=$(printf '%s\n' "${items[@]}" | fzf --multi \
+    --reverse \
+    --height=~50% \
+    --no-input \
+    --no-info \
+    --no-separator \
+    --header="" \
+    --margin=0,0,0,1 \
+    --gutter=' ' \
+    --pointer="" \
+    --marker="✓ " \
+    "${expect_arg[@]}") || rc=$?
+  [[ $rc -ne 0 ]] && return 0
+
+  local key="" items_out=""
+  if [[ ${#expect_arg[@]} -gt 0 ]]; then
+    key=$(printf '%s' "$result" | head -n1)
+    items_out=$(printf '%s' "$result" | tail -n +2)
+  else
+    items_out="$result"
+  fi
+  [[ -z $items_out ]] && return 0
+
+  if [[ -z $key ]]; then printf "default\n"
+  else                   printf "alt\n"
+  fi
+  printf '%s\n' "$items_out"
+}
+
+# fix_section <title> <prompt> <emoji> <def_label> <def_fn> <alt_key> <alt_label> <alt_fn> <items...>
+fix_section() {
+  local title=$1 prompt=$2 emoji=$3
+  local def_label=$4 def_fn=$5
+  local alt_key=$6 alt_label=$7 alt_fn=$8
+  shift 8
+  local items=("$@")
+  [[ ${#items[@]} -eq 0 ]] && return 0
+
+  begin_section
+  printf "%s%s Processing %d %s%s\n" \
+    "$C_BOLD" "$emoji" "${#items[@]}" "$title" "$C_RESET"
+  draw_rule
+
+  local result
+  result=$(bulk_select "$prompt" "$def_label" "$alt_key" "$alt_label" -- "${items[@]}")
+  if [[ -z $result ]]; then
+    SECTION_STATUS[$CURRENT_SECTION_IDX]="skipped"
+    return 0
+  fi
+
+  local action picks
+  action=$(printf '%s' "$result" | head -n1)
+  picks=$(printf '%s' "$result" | tail -n +2)
+
+  while IFS= read -r item; do
+    [[ -z $item ]] && continue
+    case $action in
+      default) "$def_fn" "$item" ;;
+      alt)     "$alt_fn" "$item" ;;
+    esac
+  done <<< "$picks"
+
+  SECTION_STATUS[$CURRENT_SECTION_IDX]="done"
+}
+
+run_drift_fix() {
+  local total=$((${#DRIFT_BREW[@]} + ${#DRIFT_BUN[@]} + ${#DRIFT_UV[@]} + ${#DRIFT_GH[@]} \
+               + ${#DRIFT_UNSTOWED[@]} + ${#DRIFT_CLAUDE_SYMLINK[@]} + ${#DRIFT_ADOPT[@]} \
+               + ${#DRIFT_CONFIG_DIRS[@]} + DRIFT_UNCOMMITTED_COUNT + DRIFT_UNPUSHED_COUNT))
+  if [[ $total -eq 0 ]]; then return 0; fi
+  if [[ ! -t 0 ]]; then
+    printf "%s⚠️ --fix requires an interactive terminal.%s\n" "$C_YELLOW" "$C_RESET" >&2
+    return 1
+  fi
+  if ! command -v fzf &>/dev/null; then
+    printf "%s⚠️ --fix requires fzf for navigation/multiselect.%s\n" "$C_YELLOW" "$C_RESET" >&2
+    printf "  Install: %sbrew install fzf%s\n" "$C_BOLD" "$C_RESET" >&2
+    return 1
+  fi
+
+  # Reset registry each run so reruns start clean.
+  SECTION_EMOJIS=()
+  SECTION_TITLES=()
+  SECTION_STATUS=()
+  CURRENT_SECTION_IDX=-1
+
+  # Pre-register sections in the order they'll be processed below. Only
+  # sections with items show up — must stay in lockstep with the fix_* calls.
+  [[ ${#DRIFT_BREW[@]} -gt 0 ]]           && register_section "📦" "Brew packages not in Brewfile"
+  [[ ${#DRIFT_BUN[@]} -gt 0 ]]            && register_section "🥟" "Bun globals not in BUN_GLOBALS"
+  [[ ${#DRIFT_UV[@]} -gt 0 ]]             && register_section "🐍" "uv tools not in UV_TOOLS"
+  [[ ${#DRIFT_GH[@]} -gt 0 ]]             && register_section "🐙" "gh extensions not in GH_EXTENSIONS"
+  [[ ${#DRIFT_UNSTOWED[@]} -gt 0 ]]       && register_section "🔗" "Stow packages"
+  [[ ${#DRIFT_CLAUDE_SYMLINK[@]} -gt 0 ]] && register_section "💔" "Claude config symlinks"
+  [[ ${#DRIFT_ADOPT[@]} -gt 0 ]]          && register_section "🆕" "Claude adoption candidates"
+  [[ ${#DRIFT_CONFIG_DIRS[@]} -gt 0 ]]    && register_section "📁" "Untracked ~/.config dirs"
+  [[ $DRIFT_UNCOMMITTED_COUNT -gt 0 ]]    && register_section "📝" "Uncommitted dotfiles changes"
+  [[ $DRIFT_UNPUSHED_COUNT -gt 0 ]]       && register_section "📤" "Unpushed dotfiles commits"
+
+  # Print the sign below the drift report, then save the cursor so each
+  # section's begin_section can clear-and-repaint just the body below it.
+  printf "\n"
+  print_sign
+  printf "\n"
+  tput sc 2>/dev/null || printf '\033[s'
+
+  fix_section "Brew packages not in Brewfile"      "brew"   "📦" \
+    "Track in Brewfile"      do_brew_track  "ctrl-x" "Uninstall"              do_brew_remove   "${DRIFT_BREW[@]}"
+  fix_section "Bun globals not in BUN_GLOBALS"     "bun"    "🥟" \
+    "Track in BUN_GLOBALS"   do_bun_track   "ctrl-x" "Uninstall"              do_bun_remove    "${DRIFT_BUN[@]}"
+  fix_section "uv tools not in UV_TOOLS"           "uv"     "🐍" \
+    "Track in UV_TOOLS"      do_uv_track    "ctrl-x" "Uninstall"              do_uv_remove     "${DRIFT_UV[@]}"
+  fix_section "gh extensions not in GH_EXTENSIONS" "gh"     "🐙" \
+    "Track in GH_EXTENSIONS" do_gh_track    "ctrl-x" "Uninstall"              do_gh_remove     "${DRIFT_GH[@]}"
+  fix_section "Stow packages"                      "stow"   "🔗" \
+    "Auto-fix (stow / adopt as needed)"  do_unstowed_fix  "" "" "" "${DRIFT_UNSTOWED[@]}"
+  fix_section "Claude config symlinks"             "claude" "💔" \
+    "Auto-fix (restore symlinks)"        do_claude_fix    "" "" "" "${DRIFT_CLAUDE_SYMLINK[@]}"
+  fix_section "Claude adoption candidates"         "adopt"  "🆕" \
+    "Adopt into dotfiles"    do_adopt       "ctrl-x" "Ignore (.adopt-ignore)" do_adopt_ignore  "${DRIFT_ADOPT[@]}"
+  fix_section "Untracked ~/.config dirs"           "config" "📁" \
+    "Adopt into dotfiles (mv + stow)" do_config_adopt "ctrl-x" "Ignore (.config-ignore)" do_config_ignore "${DRIFT_CONFIG_DIRS[@]}"
+
+  fix_uncommitted
+  fix_unpushed
+
+  # Final view: clear body, show the final section list, then completion line.
+  reset_body
+  render_section_list
+  printf "\n%s🚩 Fix mode complete.%s Re-run %s./setup.sh --check%s to confirm.\n" \
+    "$C_GREEN" "$C_RESET" "$C_BOLD" "$C_RESET"
+}
+
+# Short-circuit: --check runs the drift report (and optional --fix) and exits.
 if [[ -n $CHECK ]]; then
-  if run_drift_check; then exit 0; else exit 1; fi
+  # Clear screen on first run for a clean canvas (interactive TTY only).
+  [[ -z $QUIET && -t 1 ]] && { tput clear 2>/dev/null || printf '\033[2J\033[H'; }
+  rc=0
+  run_drift_check || rc=$?
+  if [[ -n $FIX ]]; then
+    run_drift_fix || true
+  fi
+  exit "$rc"
 fi
 
 # -----------------------------------------------------------------------------
