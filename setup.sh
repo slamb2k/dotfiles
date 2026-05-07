@@ -1038,6 +1038,7 @@ BUN_GLOBALS=(
   @google/clasp @openai/codex @steipete/bird clawdhub happy-dom markdown-pdf
   marked mcporter md-to-pdf pdfkit playwright puppeteer-core
   @fission-ai/openspec
+  lefthook
 )
 if ! command -v bun &>/dev/null; then
   note '(bun not installed yet — install via Brewfile or curl-bash first)'
