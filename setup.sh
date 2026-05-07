@@ -9,6 +9,7 @@
 #   ./setup.sh --check         # detect untracked dev tools / configs / broken symlinks
 #   ./setup.sh --check -q      # one-line drift summary (silent when clean)
 #   ./setup.sh --check --fix   # interactive drift resolution (per-item prompts)
+#   ./setup.sh --save          # auto-commit local changes, pull --rebase, push
 #   ./setup.sh -h              # this help text
 #
 # Idempotent. Safe to re-run.
@@ -21,13 +22,15 @@ DRY_RUN=
 CHECK=
 QUIET=
 FIX=
+SAVE=
 for arg in "$@"; do
   case $arg in
     -n|--dry-run) DRY_RUN=1 ;;
     -c|--check)   CHECK=1 ;;
     -q|--quiet)   QUIET=1 ;;
     --fix)        FIX=1 ;;
-    -h|--help)    sed -n '2,14p' "$0"; exit 0 ;;
+    -s|--save)    SAVE=1 ;;
+    -h|--help)    sed -n '2,15p' "$0"; exit 0 ;;
     *) echo "Unknown arg: $arg" >&2; exit 1 ;;
   esac
 done
@@ -38,6 +41,9 @@ if [[ -n $FIX && -z $CHECK ]]; then
 fi
 if [[ -n $FIX && -n $QUIET ]]; then
   echo "Error: --fix is interactive — cannot combine with --quiet" >&2; exit 1
+fi
+if [[ -n $SAVE && ( -n $CHECK || -n $FIX ) ]]; then
+  echo "Error: --save cannot combine with --check / --fix" >&2; exit 1
 fi
 
 section() {
@@ -531,6 +537,22 @@ prompt_yn() {
   [[ ${ans,,} == y* ]]
 }
 
+# Build a commit message from the dotfiles repo's current dirty state.
+# Format: "chore: <prefix> <YYYY-MM-DD HH:MM> — <up-to-3 paths>[, +N more]"
+# Returns 1 if working tree is clean. Echoes message on stdout.
+gen_commit_msg() {
+  local prefix=$1
+  local porcelain count stamp files
+  porcelain=$(cd "$REPO" && git status --porcelain 2>/dev/null)
+  [[ -z $porcelain ]] && return 1
+  count=$(printf '%s\n' "$porcelain" | wc -l)
+  stamp=$(date '+%Y-%m-%d %H:%M')
+  # Column 4+ to handle paths with spaces; cap at 3 + "+N more" for long tails.
+  files=$(printf '%s\n' "$porcelain" | awk '{print substr($0,4)}' | head -3 | paste -sd, - | sed 's/,/, /g')
+  [[ $count -gt 3 ]] && files="$files, +$((count - 3)) more"
+  printf 'chore: %s %s — %s\n' "$prefix" "$stamp" "$files"
+}
+
 fix_uncommitted() {
   [[ $DRIFT_UNCOMMITTED_COUNT -eq 0 ]] && return 0
   begin_section
@@ -541,23 +563,16 @@ fix_uncommitted() {
 
   (cd "$REPO" && git -c color.status=always status) 2>&1 | sed 's/^/    /' | head -40
 
-  # Auto-generate the commit message from timestamp + a few changed paths.
-  # Take everything from column 4 of porcelain output to handle paths with
-  # spaces; cap the file list at 3 names with "+N more" for the long tail.
-  local stamp files
-  stamp=$(date '+%Y-%m-%d %H:%M')
-  files=$(cd "$REPO" && git status --porcelain 2>/dev/null \
-    | awk '{print substr($0,4)}' | head -3 | paste -sd, - | sed 's/,/, /g')
-  [[ $DRIFT_UNCOMMITTED_COUNT -gt 3 ]] \
-    && files="$files, +$((DRIFT_UNCOMMITTED_COUNT - 3)) more"
-  local msg="chore: drift sync $stamp — $files"
+  local msg
+  msg=$(gen_commit_msg "drift sync")
   printf "  %sCommit message:%s %s\n" "$C_DIM" "$C_RESET" "$msg"
 
-  if prompt_yn "Commit and push changes?" n; then
-    if (cd "$REPO" && git add -A && git commit -m "$msg" && git push) 2>&1 | sed 's/^/    /'; then
-      say_ok "committed and pushed"
+  if prompt_yn "Commit, pull --rebase, push?" n; then
+    run_save "drift sync" 2>&1 | sed 's/^/    /'
+    if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
+      say_ok "synced"
     else
-      say_warn "commit or push failed — check output above"
+      say_warn "sync failed — check output above"
     fi
     SECTION_STATUS[$CURRENT_SECTION_IDX]="done"
   else
@@ -573,8 +588,8 @@ fix_unpushed() {
   draw_rule
   printf "\n"
 
-  if prompt_yn "Run \`git push\`?" y; then
-    (cd "$REPO" && git push 2>&1) | sed 's/^/    /' || true
+  if prompt_yn "Run \`git pull --rebase && git push\`?" y; then
+    run_save 2>&1 | sed 's/^/    /'
     SECTION_STATUS[$CURRENT_SECTION_IDX]="done"
   else
     SECTION_STATUS[$CURRENT_SECTION_IDX]="skipped"
@@ -739,6 +754,70 @@ run_drift_fix() {
   printf "\n%s🚩 Fix mode complete.%s Re-run %s./setup.sh --check%s to confirm.\n" \
     "$C_GREEN" "$C_RESET" "$C_BOLD" "$C_RESET"
 }
+
+# -----------------------------------------------------------------------------
+# --save: non-interactive sync. Auto-commits any local changes (with a
+# generated message), pulls with --rebase, and pushes. Designed to be
+# aliased and run anytime. Honors --dry-run and --quiet.
+# -----------------------------------------------------------------------------
+run_save() {
+  local prefix=${1:-save}
+  cd "$REPO" || return 1
+  if [[ ! -d .git ]]; then
+    echo "Error: $REPO is not a git repository" >&2; return 1
+  fi
+
+  local has_upstream=0
+  git rev-parse --abbrev-ref '@{u}' &>/dev/null && has_upstream=1
+
+  # 1. Commit local changes (if any) with auto-generated message.
+  local msg count
+  if msg=$(gen_commit_msg "$prefix"); then
+    count=$(git status --porcelain 2>/dev/null | wc -l)
+
+    if [[ -n $DRY_RUN ]]; then
+      [[ -z $QUIET ]] && printf "[dry-run] would commit (%d file(s)):\n  %s\n" "$count" "$msg"
+    else
+      [[ -z $QUIET ]] && printf "%s📝 Committing %d file(s):%s %s\n" "$C_BOLD" "$count" "$C_RESET" "$msg"
+      git add -A && git -c color.ui=always commit -m "$msg" >/dev/null \
+        || { echo "commit failed" >&2; return 1; }
+    fi
+  fi
+
+  # 2. Pull with rebase (skip if no upstream — usually a brand-new branch).
+  if [[ $has_upstream -eq 0 ]]; then
+    [[ -z $QUIET ]] && printf "%s⚠️  No upstream tracking branch — skipping pull/push.%s\n" "$C_YELLOW" "$C_RESET"
+    return 0
+  fi
+  if [[ -n $DRY_RUN ]]; then
+    [[ -z $QUIET ]] && printf "[dry-run] would: git pull --rebase\n"
+  else
+    [[ -z $QUIET ]] && printf "%s⬇️  Pulling…%s\n" "$C_BOLD" "$C_RESET"
+    git pull --rebase --autostash 2>&1 | sed 's/^/  /' \
+      || { echo "pull failed — resolve conflicts then re-run" >&2; return 1; }
+  fi
+
+  # 3. Push if there's anything ahead of upstream.
+  local ahead
+  ahead=$(git rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)
+  if [[ $ahead -eq 0 ]]; then
+    [[ -z $QUIET ]] && printf "%s✅ In sync with origin.%s\n" "$C_GREEN" "$C_RESET"
+    return 0
+  fi
+  if [[ -n $DRY_RUN ]]; then
+    [[ -z $QUIET ]] && printf "[dry-run] would: git push (%d commit(s) ahead)\n" "$ahead"
+  else
+    [[ -z $QUIET ]] && printf "%s⬆️  Pushing %d commit(s)…%s\n" "$C_BOLD" "$ahead" "$C_RESET"
+    git push 2>&1 | sed 's/^/  /' || { echo "push failed" >&2; return 1; }
+    [[ -z $QUIET ]] && printf "%s✅ Saved.%s\n" "$C_GREEN" "$C_RESET"
+  fi
+}
+
+# Short-circuit: --save syncs the dotfiles repo and exits.
+if [[ -n $SAVE ]]; then
+  run_save
+  exit $?
+fi
 
 # Short-circuit: --check runs the drift report (and optional --fix) and exits.
 if [[ -n $CHECK ]]; then
@@ -958,6 +1037,7 @@ section 'bun globals'
 BUN_GLOBALS=(
   @google/clasp @openai/codex @steipete/bird clawdhub happy-dom markdown-pdf
   marked mcporter md-to-pdf pdfkit playwright puppeteer-core
+  @fission-ai/openspec
 )
 if ! command -v bun &>/dev/null; then
   note '(bun not installed yet — install via Brewfile or curl-bash first)'

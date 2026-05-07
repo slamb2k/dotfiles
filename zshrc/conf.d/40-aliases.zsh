@@ -32,6 +32,11 @@ alias gcoall='git checkout -- .'
 alias gr='git remote'
 alias gre='git reset'
 
+# Dotfiles
+alias dfs="$HOME/dotfiles/setup.sh --save"   # auto-commit + pull --rebase + push
+alias dfc="$HOME/dotfiles/setup.sh --check"  # drift check
+alias dff="$HOME/dotfiles/setup.sh --check --fix"  # interactive drift fix
+
 # Docker
 alias dco="docker compose"
 alias dps="docker ps"

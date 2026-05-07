@@ -19,6 +19,7 @@ fi
 [[ -d "$HOME/.cargo/bin" ]]               && path=("$HOME/.cargo/bin" $path)
 [[ -d "$HOME/.local/share/mise/shims" ]]  && path=("$HOME/.local/share/mise/shims" $path)
 [[ -d "$HOME/.local/bin" ]]               && path=("$HOME/.local/bin" $path)
+[[ -d "$HOME/.bun/bin" ]]                 && path=("$HOME/.bun/bin" $path) && export BUN_INSTALL="$HOME/.bun"
 typeset -U path PATH
 
 # Tool-specific exports
