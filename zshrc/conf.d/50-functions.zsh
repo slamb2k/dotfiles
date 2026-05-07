@@ -29,12 +29,12 @@ alias rr='ranger'
 # Dotfiles drift check — runs once per day on shell startup. Silent when clean,
 # prints a one-line summary when something's installed but not yet tracked.
 __dotfiles_drift_check() {
-  local script=$HOME/dotfiles/check-drift.sh
+  local script=$HOME/dotfiles/setup.sh
   local marker=$HOME/.cache/dotfiles-drift-checked
   [[ -x $script ]] || return
   mkdir -p "${marker%/*}"
   if [[ ! -f $marker ]] || [[ -n $(find "$marker" -mtime +0 2>/dev/null) ]]; then
-    "$script" --quiet
+    "$script" --check --quiet
     touch "$marker"
   fi
 }
