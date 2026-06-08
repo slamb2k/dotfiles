@@ -6,10 +6,10 @@
 # Usage:
 #   ./setup.sh                 # apply everything (real run)
 #   ./setup.sh --dry-run       # show what would change, make no modifications
-#   ./setup.sh --check         # detect untracked dev tools / configs / broken symlinks
-#   ./setup.sh --check -q      # one-line drift summary (silent when clean)
-#   ./setup.sh --check --fix   # interactive drift resolution (per-item prompts)
-#   ./setup.sh --audit         # read-only audit for duplicate/redundant tools
+#   ./setup.sh --check         # dotfiles convergence check (repo manifests/stow/git state)
+#   ./setup.sh --check -q      # one-line convergence summary (silent when clean)
+#   ./setup.sh --check --fix   # interactive convergence fixer (per-item prompts)
+#   ./setup.sh --audit         # read-only tool hygiene audit (duplicates/legacy/unmanaged)
 #   ./setup.sh --save          # auto-commit local changes, pull --rebase, push
 #   ./setup.sh -h              # this help text
 #
@@ -768,9 +768,10 @@ run_drift_fix() {
 }
 
 # -----------------------------------------------------------------------------
-# --audit: read-only package/tool overlap audit. Complements --check by looking
-# for duplicate command providers across brew/apt/npm/bun/pnpm/manual installs
-# and legacy shell framework leftovers. It never removes anything.
+# --audit: read-only package/tool hygiene audit. Complements --check by looking
+# for duplicate command providers across brew/apt/npm/bun/pnpm/manual installs,
+# legacy tools, unmanaged apt-only utilities, and shell framework leftovers. It
+# never removes anything.
 # -----------------------------------------------------------------------------
 run_audit() {
   local cmd path pkg mark
@@ -838,7 +839,42 @@ run_audit() {
   [[ -d $HOME/.oh-my-zsh ]] && { leftovers=$((leftovers + 1)); printf "  ⚠ %s (legacy; not loaded by ZDOTDIR)\n" "$HOME/.oh-my-zsh"; }
   [[ -d /usr/local/go ]] && { leftovers=$((leftovers + 1)); printf "  ⚠ /usr/local/go (manual/root-owned Go; Brew Go should win)\n"; }
   [[ -f /usr/local/bin/starship ]] && { leftovers=$((leftovers + 1)); printf "  ⚠ /usr/local/bin/starship (manual; Brew starship should win)\n"; }
-  [[ $leftovers -eq 0 ]] && printf "  %s✓ no known legacy leftovers found%s\n" "$C_GREEN" "$C_RESET"
+  [[ $leftovers -eq 0 ]] && printf "  %s✓ no known manual leftovers found%s\n" "$C_GREEN" "$C_RESET"
+
+  printf "\n%sLegacy/unmanaged tools%s\n" "$C_BOLD" "$C_RESET"
+  local legacy_count=0
+  local legacy_tools=(
+    neofetch screenfetch fastfetch
+    pyenv rbenv asdf fnm
+    powerlevel10k p10k
+  )
+  for cmd in "${legacy_tools[@]}"; do
+    if command -v "$cmd" &>/dev/null; then
+      legacy_count=$((legacy_count + 1))
+      printf "  ⚠ %s -> %s\n" "$cmd" "$(command -v "$cmd")"
+      if command -v dpkg-query &>/dev/null; then
+        local owner
+        owner=$(dpkg-query -S "$(command -v "$cmd")" 2>/dev/null | cut -d: -f1 | head -1 || true)
+        [[ -n $owner ]] && printf "    apt package: %s\n" "$owner"
+      fi
+    fi
+  done
+  local legacy_config_dirs=(neofetch fastfetch screenfetch)
+  for cfg in "${legacy_config_dirs[@]}"; do
+    if [[ -d "$HOME/.config/$cfg" ]]; then
+      legacy_count=$((legacy_count + 1))
+      printf "  ⚠ config dir: %s\n" "$HOME/.config/$cfg"
+    fi
+  done
+  [[ -d $HOME/.oh-my-zsh ]] && { legacy_count=$((legacy_count + 1)); printf "  ⚠ shell framework: %s\n" "$HOME/.oh-my-zsh"; }
+  [[ -f $HOME/.p10k.zsh ]] && { legacy_count=$((legacy_count + 1)); printf "  ⚠ prompt config: %s\n" "$HOME/.p10k.zsh"; }
+  if [[ $legacy_count -eq 0 ]]; then
+    printf "  %s✓ no known legacy/unmanaged tools found%s\n" "$C_GREEN" "$C_RESET"
+  else
+    printf "  Suggestions:\n"
+    printf "    - If unused: remove apt-only legacy tools, e.g. sudo apt remove neofetch\n"
+    printf "    - Remove matching config dirs only after confirming they are obsolete.\n"
+  fi
 
   printf "\n%sGlobal JavaScript tools%s\n" "$C_BOLD" "$C_RESET"
   if command -v npm &>/dev/null; then
@@ -865,7 +901,8 @@ run_audit() {
   printf "\n%sNext steps%s\n" "$C_BOLD" "$C_RESET"
   printf "  1. Prefer Brew for tools listed in linux/Brewfile.\n"
   printf "  2. Do not apt-remove packages whose simulation removes ubuntu-wsl/byobu.\n"
-  printf "  3. Root-owned leftovers require sudo, e.g. /usr/local/go or ~/.oh-my-zsh.\n"
+  printf "  3. Treat --check as repo convergence and --audit as machine/tool hygiene.\n"
+  printf "  4. Root-owned leftovers require sudo, e.g. /usr/local/go or ~/.oh-my-zsh.\n"
 }
 
 # -----------------------------------------------------------------------------
