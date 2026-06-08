@@ -485,8 +485,8 @@ do_unstowed_fix() {
   local entry=$1 name=${entry%%|*} state=${entry##*|}
   case $state in
     missing)           (cd "$REPO" && stow .) && say_ok "stowed repo configs" || say_warn "stow . failed" ;;
-    real-path)         (cd "$REPO" && stow --adopt "$name") && say_ok "adopted $name (review with: cd ~/dotfiles && git diff)" || say_warn "adopt $name failed" ;;
-    symlink-elsewhere) rm -f "$HOME/.config/$name" && (cd "$REPO" && stow "$name") && say_ok "fixed $name" || say_warn "fix $name failed" ;;
+    real-path)         say_warn "$name is a real path; back it up/adopt manually, then run: cd ~/dotfiles && stow ." ;;
+    symlink-elsewhere) rm -f "$HOME/.config/$name" && (cd "$REPO" && stow .) && say_ok "fixed $name" || say_warn "fix $name failed" ;;
   esac
 }
 
