@@ -167,7 +167,7 @@ brew "yt-dlp"
 # =============================================================================
 brew "make"
 brew "cmake"
-brew "pkg-config"
+brew "pkgconf"
 brew "tokei"                     # source-code line counter
 brew "shellcheck"                # bash linter (apt has it too)
 brew "shfmt"                     # bash formatter
@@ -176,7 +176,8 @@ brew "bats-core"                 # already 'bats' via apt; brew variant is curre
 # =============================================================================
 # Rust toolchain & Go (mise can manage these too — pick one path)
 # =============================================================================
-brew "rustup-init"               # install rustup, then `rustup default stable`
+brew "gcc"                       # Linuxbrew compiler toolchain
+brew "rustup"                    # install rustup, then `rustup default stable`
 brew "go"                        # provides go itself
 
 # =============================================================================
