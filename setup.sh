@@ -944,6 +944,32 @@ if [[ -n $CHECK ]]; then
   exit "$rc"
 fi
 
+# Existing-machine hint for normal setup runs. Non-blocking by design: fresh
+# machines should proceed, but lived-in machines get nudged toward diagnostics.
+existing_machine_hint() {
+  [[ -n ${DOTFILES_NO_EXISTING_MACHINE_HINT:-} ]] && return 0
+  [[ -n $DRY_RUN ]] && return 0
+
+  local signals=()
+  [[ -f $HOME/.zshenv ]] && signals+=("~/.zshenv exists")
+  [[ -e $HOME/.config/zshrc ]] && signals+=("~/.config/zshrc exists")
+  [[ -f $HOME/.zshrc ]] && signals+=("legacy ~/.zshrc exists")
+  command -v brew &>/dev/null && signals+=("Homebrew already installed")
+  [[ -d $HOME/.config && $(find "$HOME/.config" -mindepth 1 -maxdepth 1 2>/dev/null | head -1) ]] \
+    && signals+=("~/.config is populated")
+
+  [[ ${#signals[@]} -eq 0 ]] && return 0
+
+  printf "\n%s%s⚠ Existing machine detected%s\n" "$C_BOLD" "$C_YELLOW" "$C_RESET"
+  printf "  Signals: %s\n" "${signals[*]}"
+  printf "  Recommended before applying setup:\n"
+  printf "    %s~/dotfiles/setup.sh --check%s\n" "$C_BOLD" "$C_RESET"
+  printf "    %s~/dotfiles/setup.sh --dry-run%s\n" "$C_BOLD" "$C_RESET"
+  printf "  Continuing anyway. Set DOTFILES_NO_EXISTING_MACHINE_HINT=1 to suppress.\n"
+}
+
+existing_machine_hint
+
 # -----------------------------------------------------------------------------
 # 1. Homebrew
 # -----------------------------------------------------------------------------
