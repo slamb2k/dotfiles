@@ -9,6 +9,7 @@
 #   ./setup.sh --check         # detect untracked dev tools / configs / broken symlinks
 #   ./setup.sh --check -q      # one-line drift summary (silent when clean)
 #   ./setup.sh --check --fix   # interactive drift resolution (per-item prompts)
+#   ./setup.sh --audit         # read-only audit for duplicate/redundant tools
 #   ./setup.sh --save          # auto-commit local changes, pull --rebase, push
 #   ./setup.sh -h              # this help text
 #
@@ -22,6 +23,7 @@ DRY_RUN=
 CHECK=
 QUIET=
 FIX=
+AUDIT=
 SAVE=
 for arg in "$@"; do
   case $arg in
@@ -29,6 +31,7 @@ for arg in "$@"; do
     -c|--check)   CHECK=1 ;;
     -q|--quiet)   QUIET=1 ;;
     --fix)        FIX=1 ;;
+    --audit)      AUDIT=1 ;;
     -s|--save)    SAVE=1 ;;
     -h|--help)    sed -n '2,15p' "$0"; exit 0 ;;
     *) echo "Unknown arg: $arg" >&2; exit 1 ;;
@@ -42,8 +45,11 @@ fi
 if [[ -n $FIX && -n $QUIET ]]; then
   echo "Error: --fix is interactive — cannot combine with --quiet" >&2; exit 1
 fi
-if [[ -n $SAVE && ( -n $CHECK || -n $FIX ) ]]; then
-  echo "Error: --save cannot combine with --check / --fix" >&2; exit 1
+if [[ -n $SAVE && ( -n $CHECK || -n $FIX || -n $AUDIT ) ]]; then
+  echo "Error: --save cannot combine with --check / --fix / --audit" >&2; exit 1
+fi
+if [[ -n $AUDIT && ( -n $CHECK || -n $FIX ) ]]; then
+  echo "Error: --audit cannot combine with --check / --fix" >&2; exit 1
 fi
 
 section() {
@@ -756,6 +762,107 @@ run_drift_fix() {
 }
 
 # -----------------------------------------------------------------------------
+# --audit: read-only package/tool overlap audit. Complements --check by looking
+# for duplicate command providers across brew/apt/npm/bun/pnpm/manual installs
+# and legacy shell framework leftovers. It never removes anything.
+# -----------------------------------------------------------------------------
+run_audit() {
+  local cmd path pkg mark
+
+  printf "%s%s🧭 Redundant tool audit%s\n" "$C_BOLD" "$C_CYAN" "$C_RESET"
+  printf "%sRead-only: this reports candidates only; it does not uninstall anything.%s\n" "$C_DIM" "$C_RESET"
+
+  printf "\n%sActive package managers%s\n" "$C_BOLD" "$C_RESET"
+  for cmd in brew apt npm pnpm bun pip pip3 pipx cargo gem go; do
+    if command -v "$cmd" &>/dev/null; then
+      printf "  ✓ %-6s %s\n" "$cmd" "$($cmd --version 2>/dev/null | head -1 || true)"
+    else
+      printf "  · %-6s not found\n" "$cmd"
+    fi
+  done
+
+  printf "\n%sPATH precedence%s\n" "$C_BOLD" "$C_RESET"
+  tr ':' '\n' <<< "$PATH" | nl -ba | sed -n '1,30p'
+
+  printf "\n%sDuplicate command providers in PATH%s\n" "$C_BOLD" "$C_RESET"
+  local commands=(
+    git gh curl wget rg ripgrep fd fdfind fzf bat batcat eza tree jq yq tmux nvim
+    starship zoxide atuin direnv az kubectl terraform helm k9s lazygit lazydocker
+    delta dust duf procs hyperfine shellcheck shfmt bats go rustup uv uvx ruff
+    pre-commit http xh nmap stow glow gum pandoc ffmpeg magick yt-dlp
+  )
+  local dup_count=0
+  for cmd in "${commands[@]}"; do
+    mapfile -t paths < <(which -a "$cmd" 2>/dev/null | awk '!seen[$0]++')
+    if (( ${#paths[@]} > 1 )); then
+      dup_count=$((dup_count + 1))
+      printf "  %s⚠ %s%s\n" "$C_YELLOW" "$cmd" "$C_RESET"
+      printf '    %s\n' "${paths[@]}"
+    fi
+  done
+  [[ $dup_count -eq 0 ]] && printf "  %s✓ no duplicate command providers found%s\n" "$C_GREEN" "$C_RESET"
+
+  printf "\n%sApt packages that duplicate Brew-managed tools%s\n" "$C_BOLD" "$C_RESET"
+  local apt_candidates=(git gh curl wget jq tmux azure-cli nmap fd)
+  local apt_count=0
+  for pkg in "${apt_candidates[@]}"; do
+    if dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
+      apt_count=$((apt_count + 1))
+      mark=$(apt-mark showmanual 2>/dev/null | grep -qx "$pkg" && echo manual || echo auto/dependency)
+      printf "  %-12s %s\n" "$pkg" "$mark"
+      if command -v apt-get &>/dev/null; then
+        local removals
+        removals=$(apt-get -s remove "$pkg" 2>/dev/null \
+          | awk '/^The following packages will be REMOVED:/{flag=1; next} flag && /^[[:space:]]/{print; next} flag{exit}' \
+          | tr -s '[:space:]' ' ' | sed 's/^ //;s/ $//')
+        [[ -n $removals ]] && printf "    would remove: %s\n" "$removals"
+      fi
+    fi
+  done
+  [[ $apt_count -eq 0 ]] && printf "  %s✓ no apt duplicates from candidate list%s\n" "$C_GREEN" "$C_RESET"
+
+  printf "\n%sUser/manual install leftovers%s\n" "$C_BOLD" "$C_RESET"
+  local leftovers=0
+  for path in "$HOME/.local/bin/uv" "$HOME/.local/bin/uvx" "$HOME/.zcompdump" "$HOME/.p10k.zsh" "$HOME/.zshrc"; do
+    if [[ -e $path ]]; then
+      leftovers=$((leftovers + 1))
+      printf "  ⚠ %s\n" "$path"
+    fi
+  done
+  [[ -d $HOME/.oh-my-zsh ]] && { leftovers=$((leftovers + 1)); printf "  ⚠ %s (legacy; not loaded by ZDOTDIR)\n" "$HOME/.oh-my-zsh"; }
+  [[ -d /usr/local/go ]] && { leftovers=$((leftovers + 1)); printf "  ⚠ /usr/local/go (manual/root-owned Go; Brew Go should win)\n"; }
+  [[ -f /usr/local/bin/starship ]] && { leftovers=$((leftovers + 1)); printf "  ⚠ /usr/local/bin/starship (manual; Brew starship should win)\n"; }
+  [[ $leftovers -eq 0 ]] && printf "  %s✓ no known legacy leftovers found%s\n" "$C_GREEN" "$C_RESET"
+
+  printf "\n%sGlobal JavaScript tools%s\n" "$C_BOLD" "$C_RESET"
+  if command -v npm &>/dev/null; then
+    printf "  npm -g:\n"
+    npm -g ls --depth=0 2>/dev/null | sed 's/^/    /' || true
+  fi
+  if command -v pnpm &>/dev/null; then
+    printf "  pnpm -g:\n"
+    pnpm list -g --depth=0 2>/dev/null | sed 's/^/    /' || true
+  fi
+  if command -v bun &>/dev/null; then
+    printf "  bun -g:\n"
+    bun pm ls -g 2>/dev/null | sed 's/^/    /' || true
+  fi
+
+  printf "\n%sManual binaries in /usr/local/bin%s\n" "$C_BOLD" "$C_RESET"
+  if [[ -d /usr/local/bin ]]; then
+    find /usr/local/bin -maxdepth 1 \( -type f -o -type l \) 2>/dev/null \
+      | sort | sed 's#^#  #' | head -100
+  else
+    printf "  /usr/local/bin does not exist\n"
+  fi
+
+  printf "\n%sNext steps%s\n" "$C_BOLD" "$C_RESET"
+  printf "  1. Prefer Brew for tools listed in linux/Brewfile.\n"
+  printf "  2. Do not apt-remove packages whose simulation removes ubuntu-wsl/byobu.\n"
+  printf "  3. Root-owned leftovers require sudo, e.g. /usr/local/go or ~/.oh-my-zsh.\n"
+}
+
+# -----------------------------------------------------------------------------
 # --save: non-interactive sync. Auto-commits any local changes (with a
 # generated message), pulls with --rebase, and pushes. Designed to be
 # aliased and run anytime. Honors --dry-run and --quiet.
@@ -812,6 +919,12 @@ run_save() {
     [[ -z $QUIET ]] && printf "%s✅ Saved.%s\n" "$C_GREEN" "$C_RESET"
   fi
 }
+
+# Short-circuit: --audit runs the duplicate/redundant tool audit and exits.
+if [[ -n $AUDIT ]]; then
+  run_audit
+  exit $?
+fi
 
 # Short-circuit: --save syncs the dotfiles repo and exits.
 if [[ -n $SAVE ]]; then
