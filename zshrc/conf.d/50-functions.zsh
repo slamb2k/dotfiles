@@ -132,3 +132,39 @@ zle-line-init() {
   fi
 }
 zle -N zle-line-init
+
+# Azure CLI profile login helper. Tenant-specific aliases live in .zshrc.local.
+azlogin() {
+  local name="$1" tenant="$2"
+  [[ -z "$name" || -z "$tenant" ]] && { print "usage: azlogin <profile> <tenant>"; return 1; }
+
+  local port=""
+  # run az login on the VM with --debug; BROWSER=echo stops it hijacking w3m and just prints the URL
+  ssh "$VM_HOST" \
+    "BROWSER=echo AZURE_CONFIG_DIR=\$HOME/.azure-profiles/$name az login --tenant '$tenant' --debug" 2>&1 |
+  while IFS= read -r line; do
+    # surface the sign-in URL for you to open in the laptop browser
+    case "$line" in
+      *login.microsoftonline.com/*) print -- "OPEN: $line" ;;
+    esac
+    # first time we see the redirect port, inject a local forward into the SSH master
+    if [[ -z "$port" && "$line" == *"localhost:"* && "$line" == *redirect_uri* ]]; then
+      port="${line##*localhost:}"; port="${port%%[^0-9]*}"
+      if [[ -n "$port" ]]; then
+        ssh -O forward -L "${port}:localhost:${port}" "$VM_HOST" 2>/dev/null \
+          && print -- ">> forwarding localhost:${port} -> ${VM_HOST}"
+      fi
+    fi
+  done
+
+  # tidy up the forward once login completes (optional, keeps the master clean)
+  [[ -n "$port" ]] && ssh -O cancel -L "${port}:localhost:${port}" "$VM_HOST" 2>/dev/null
+}
+
+azlogin-debug() {
+  local name="$1" tenant="$2"
+  [[ -z "$name" || -z "$tenant" ]] && { print "usage: azlogin-debug <profile> <tenant>"; return 1; }
+  ssh -v "$VM_HOST" \
+    "BROWSER=echo AZURE_CONFIG_DIR=\$HOME/.azure-profiles/$name az login --tenant '$tenant' --debug" 2>&1 \
+    | tee ~/azlogin-$name.log
+}

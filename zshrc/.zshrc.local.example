@@ -1,28 +1,29 @@
 # Per-machine overrides — sourced last by .zshrc when present.
 #
+# IMPORTANT: This file should contain SECRETS ONLY. All behavioral logic
+# (aliases, functions, PATH, tmux auto-attach, etc.) belongs in conf.d/*.zsh
+# with __is_vm / __is_wsl guards so it is versioned and visible on every box.
+#
 # To use:
 #   cp $ZDOTDIR/.zshrc.local.example $ZDOTDIR/.zshrc.local
 #
-# .zshrc.local is gitignored (.gitignore entry: zshrc/.zshrc.local), so
-# this is the place for anything you don't want in a public repo:
-#   - Secrets / API keys
-#   - Work-only or machine-only PATH entries
-#   - Tweaks specific to one host
+# .zshrc.local is gitignored (.gitignore entry: zshrc/.zshrc.local).
+#
+# Good candidates for this file:
+#   - API keys / tokens / tenant IDs
+#   - Work VPN hostnames or credentials
+#   - One-off overrides you genuinely don't want shared
+#
+# Things that should NOT go here:
+#   - PATH additions for common tools (use 00-env.zsh with guards)
+#   - Aliases that differ by machine (use 40-aliases.zsh with guards)
+#   - Tmux auto-attach (use 60-tmux.zsh with __is_vm guard)
+#   - Secrets that fit ~/.config/secrets/*.zsh (sourced by 99-secrets.zsh)
 
-# ---- Secrets ---------------------------------------------------------------
-# Inline — simple, but plaintext on disk in ~/.config/zshrc/:
-# export GITHUB_TOKEN=...
-# export OPENAI_API_KEY=...
-# export ANTHROPIC_API_KEY=...
+# ---- Inline secrets (simple, but plaintext on disk) -------------------------
+# export WORK_TENANT_ID="1234-5678-..."
+# alias azlogin-work="azlogin work $WORK_TENANT_ID"
 
-# From a password manager on demand (recommended — never on disk):
-# command -v op   &>/dev/null && export GITHUB_TOKEN=$(op read "op://Personal/GitHub/token" 2>/dev/null)
+# ---- From password manager (recommended — never on disk) --------------------
+# command -v op   &>/dev/null && export GITHUB_TOKEN=$(op read "op://..." 2>/dev/null)
 # command -v pass &>/dev/null && export OPENAI_API_KEY=$(pass show api/openai 2>/dev/null)
-
-# ---- Per-machine PATH ------------------------------------------------------
-# path=("$HOME/work/bin" $path)
-# typeset -U path PATH
-
-# ---- Work-only aliases / functions -----------------------------------------
-# alias deploy-prod='./scripts/deploy.sh production'
-# alias vpn-on='sudo wg-quick up work'
