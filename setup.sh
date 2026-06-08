@@ -466,7 +466,7 @@ add_to_array() {
       print; next
     }
     { print }
-  ' "$file" > "$tmp" && mv "$tmp" "$file"
+  ' "$file" > "$tmp" && chmod --reference="$file" "$tmp" 2>/dev/null && mv "$tmp" "$file"
 }
 
 add_to_brewfile() { printf 'brew "%s"\n' "$1" >> "$REPO/linux/Brewfile"; }
