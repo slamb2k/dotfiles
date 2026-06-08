@@ -623,10 +623,10 @@ bulk_select() {
   # picker area) with a blank line separating it from the items.
   local hint expect_arg=()
   if [[ -n $alt_key && -n $alt_label ]]; then
-    hint="↑↓ navigate · Tab multi-select · Enter ${default_label} · Ctrl-X ${alt_label} · Esc skip"
+    hint="↑↓/Ctrl-JK navigate · Tab multi-select · Enter ${default_label} · Ctrl-X ${alt_label} · Esc skip"
     expect_arg=(--expect="$alt_key")
   else
-    hint="↑↓ navigate · Tab multi-select · Enter ${default_label} · Esc skip"
+    hint="↑↓/Ctrl-JK navigate · Tab multi-select · Enter ${default_label} · Esc skip"
   fi
   printf "%s%s%s\n" "$C_DIM" "$hint" "$C_RESET" >&2
 
@@ -643,8 +643,9 @@ bulk_select() {
     --header="" \
     --margin=0,0,0,1 \
     --gutter=' ' \
-    --pointer="" \
+    --pointer="➜ " \
     --marker="✓ " \
+    --bind='ctrl-j:down,ctrl-k:up' \
     "${expect_arg[@]}") || rc=$?
   [[ $rc -ne 0 ]] && return 0
 
