@@ -1,0 +1,17 @@
+# Global Bun packages managed by setup.sh
+@earendil-works/pi-coding-agent
+@fission-ai/openspec
+@google/clasp
+@openai/codex
+@steipete/bird
+azurite
+clawdhub
+happy-dom
+lefthook
+markdown-pdf
+marked
+mcporter
+md-to-pdf
+pdfkit
+playwright
+puppeteer-core

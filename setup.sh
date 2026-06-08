@@ -105,8 +105,8 @@ install_apt_repo() {
 
 # -----------------------------------------------------------------------------
 # Drift detection (run via --check). Compares the live machine against the
-# manifests in this repo (Brewfile, BUN_GLOBALS, UV_TOOLS, GH_EXTENSIONS, stow
-# packages, claude config symlinks, dotfiles repo state).
+# manifests in this repo (Brewfile, linux/*.txt tool manifests, stow packages,
+# claude config symlinks, dotfiles repo state).
 #
 # With --check --fix, walks each drift item interactively and offers
 # type-specific actions (track in manifest, uninstall, stow, adopt, ignore).
@@ -124,6 +124,28 @@ if [[ -t 1 ]]; then
   C_YELLOW=$'\033[33m'
   C_CYAN=$'\033[36m'
 fi
+
+# Manifest helpers. Manifest files are newline-separated, with blank lines and
+# comments ignored. setup.sh owns logic; linux/*.txt files own install inventory.
+manifest_items() {
+  local file=$1
+  [[ -f $file ]] || return 0
+  sed -E 's/[[:space:]]*#.*$//; /^[[:space:]]*$/d; s/^[[:space:]]+//; s/[[:space:]]+$//' "$file" | sort -u
+}
+
+add_to_manifest() {
+  local file=$1 item=$2
+  mkdir -p "$(dirname "$file")"
+  touch "$file"
+  if manifest_items "$file" | grep -Fxq "$item"; then
+    return 0
+  fi
+  printf '%s\n' "$item" >> "$file"
+  # Keep comments at top and sort non-comment entries below them.
+  local tmp; tmp=$(mktemp)
+  { grep -E '^[[:space:]]*#' "$file" || true; manifest_items "$file"; } > "$tmp"
+  mv "$tmp" "$file"
+}
 
 # Drift collectors — populated by run_drift_check, consumed by run_drift_fix.
 DRIFT_BREW=() DRIFT_BUN=() DRIFT_UV=() DRIFT_GH=()
@@ -161,20 +183,6 @@ run_drift_check() {
 
   [[ -z $QUIET ]] && printf "%s%s🔍 Dotfiles drift check%s\n" "$C_BOLD" "$C_CYAN" "$C_RESET"
 
-  # Extract a bash array literal from this script by name → newline-separated values
-  extract_array() {
-    local name=$1
-    awk -v name="$name" '
-      $0 ~ "^"name"=\\(" { capture=1; sub("^"name"=\\(","") }
-      capture {
-        sub(/[ \t]*#.*$/, "")
-        sub(/\)[ \t]*$/, "")
-        print
-      }
-      capture && /\)/ { capture=0 }
-    ' "$REPO/setup.sh" | tr -s ' \t\n' '\n' | sed '/^$/d' | sort -u
-  }
-
   count_lines() { [[ -z $1 ]] && echo 0 || echo "$1" | wc -l; }
 
   # 1. Brew leaves vs Brewfile
@@ -188,38 +196,38 @@ run_drift_check() {
     drift_section "brew packages not in Brewfile" "$(count_lines "$drift")" "$drift" "📦" "$C_YELLOW"
   fi
 
-  # 2. Bun globals vs BUN_GLOBALS array
+  # 2. Bun globals vs linux/bun-globals.txt
   if command -v bun &>/dev/null; then
     local installed tracked drift
     installed=$(bun pm ls -g 2>/dev/null \
                 | sed -nE 's/^[├└]── (@?[^@]+)@.*/\1/p' | sort -u)
-    tracked=$(extract_array BUN_GLOBALS)
+    tracked=$(manifest_items "$REPO/linux/bun-globals.txt")
     drift=$(comm -23 <(echo "$installed") <(echo "$tracked") || true)
     [[ -n $drift ]] && while IFS= read -r p; do DRIFT_BUN+=("$p"); done <<< "$drift"
-    drift_section "bun globals not in BUN_GLOBALS" "$(count_lines "$drift")" "$drift" "🥟" "$C_YELLOW"
+    drift_section "bun globals not in linux/bun-globals.txt" "$(count_lines "$drift")" "$drift" "🥟" "$C_YELLOW"
   fi
 
-  # 3. uv tools vs UV_TOOLS array
+  # 3. uv tools vs linux/uv-tools.txt
   if command -v uv &>/dev/null; then
     local installed tracked drift
     installed=$(uv tool list 2>/dev/null \
                 | awk '/^[a-zA-Z]/ {print $1}' | sort -u)
-    tracked=$(extract_array UV_TOOLS)
+    tracked=$(manifest_items "$REPO/linux/uv-tools.txt")
     drift=$(comm -23 <(echo "$installed") <(echo "$tracked") || true)
     [[ -n $drift ]] && while IFS= read -r p; do DRIFT_UV+=("$p"); done <<< "$drift"
-    drift_section "uv tools not in UV_TOOLS" "$(count_lines "$drift")" "$drift" "🐍" "$C_YELLOW"
+    drift_section "uv tools not in linux/uv-tools.txt" "$(count_lines "$drift")" "$drift" "🐍" "$C_YELLOW"
   fi
 
-  # 4. gh extensions vs GH_EXTENSIONS array
+  # 4. gh extensions vs linux/gh-extensions.txt
   if command -v gh &>/dev/null; then
     local installed tracked drift
     installed=$(gh extension list 2>/dev/null \
                 | awk '{ for(i=1;i<=NF;i++) if($i ~ /^[^[:space:]]+\/[^[:space:]]+$/) {print $i; break} }' \
                 | sort -u)
-    tracked=$(extract_array GH_EXTENSIONS)
+    tracked=$(manifest_items "$REPO/linux/gh-extensions.txt")
     drift=$(comm -23 <(echo "$installed") <(echo "$tracked") || true)
     [[ -n $drift ]] && while IFS= read -r p; do DRIFT_GH+=("$p"); done <<< "$drift"
-    drift_section "gh extensions not in GH_EXTENSIONS" "$(count_lines "$drift")" "$drift" "🐙" "$C_YELLOW"
+    drift_section "gh extensions not in linux/gh-extensions.txt" "$(count_lines "$drift")" "$drift" "🐙" "$C_YELLOW"
   fi
 
   # 5. Dotfiles packages that aren't symlinked into ~/.config (forgot to stow?)
@@ -446,39 +454,16 @@ begin_section() {
   printf "\n"
 }
 
-# Insert a new entry into a bash array literal in setup.sh (single- or multi-line).
-add_to_array() {
-  local array_name=$1 item=$2 file="$REPO/setup.sh"
-  local tmp; tmp=$(mktemp)
-  awk -v name="$array_name" -v item="$item" '
-    BEGIN { inarr = 0 }
-    !inarr && $0 ~ "^" name "=\\(" {
-      if ($0 ~ /\)[[:space:]]*$/) {
-        sub(/\)[[:space:]]*$/, " " item ")")
-        print; next
-      }
-      inarr = 1
-      print; next
-    }
-    inarr && /^\)/ {
-      print "  " item
-      inarr = 0
-      print; next
-    }
-    { print }
-  ' "$file" > "$tmp" && chmod --reference="$file" "$tmp" 2>/dev/null && mv "$tmp" "$file"
-}
-
 add_to_brewfile() { printf 'brew "%s"\n' "$1" >> "$REPO/linux/Brewfile"; }
 
 # ----- action verbs (one per type × direction) -----
 do_brew_track()  { add_to_brewfile "$1" && say_ok "tracked $1"; }
 do_brew_remove() { brew uninstall "$1" 2>&1 | sed 's/^/    /' || say_warn "uninstall $1 failed"; }
-do_bun_track()   { add_to_array BUN_GLOBALS "$1" && say_ok "tracked $1"; }
+do_bun_track()   { add_to_manifest "$REPO/linux/bun-globals.txt" "$1" && say_ok "tracked $1"; }
 do_bun_remove()  { bun remove -g "$1" 2>&1 | sed 's/^/    /' || say_warn "remove $1 failed"; }
-do_uv_track()    { add_to_array UV_TOOLS "$1" && say_ok "tracked $1"; }
+do_uv_track()    { add_to_manifest "$REPO/linux/uv-tools.txt" "$1" && say_ok "tracked $1"; }
 do_uv_remove()   { uv tool uninstall "$1" 2>&1 | sed 's/^/    /' || say_warn "remove $1 failed"; }
-do_gh_track()    { add_to_array GH_EXTENSIONS "$1" && say_ok "tracked $1"; }
+do_gh_track()    { add_to_manifest "$REPO/linux/gh-extensions.txt" "$1" && say_ok "tracked $1"; }
 do_gh_remove()   { gh extension remove "$1" 2>&1 | sed 's/^/    /' || say_warn "remove $1 failed"; }
 
 do_unstowed_fix() {
@@ -724,9 +709,9 @@ run_drift_fix() {
   # Pre-register sections in the order they'll be processed below. Only
   # sections with items show up — must stay in lockstep with the fix_* calls.
   [[ ${#DRIFT_BREW[@]} -gt 0 ]]           && register_section "📦" "Brew packages not in Brewfile"
-  [[ ${#DRIFT_BUN[@]} -gt 0 ]]            && register_section "🥟" "Bun globals not in BUN_GLOBALS"
-  [[ ${#DRIFT_UV[@]} -gt 0 ]]             && register_section "🐍" "uv tools not in UV_TOOLS"
-  [[ ${#DRIFT_GH[@]} -gt 0 ]]             && register_section "🐙" "gh extensions not in GH_EXTENSIONS"
+  [[ ${#DRIFT_BUN[@]} -gt 0 ]]            && register_section "🥟" "Bun globals not in linux/bun-globals.txt"
+  [[ ${#DRIFT_UV[@]} -gt 0 ]]             && register_section "🐍" "uv tools not in linux/uv-tools.txt"
+  [[ ${#DRIFT_GH[@]} -gt 0 ]]             && register_section "🐙" "gh extensions not in linux/gh-extensions.txt"
   [[ ${#DRIFT_UNSTOWED[@]} -gt 0 ]]       && register_section "🔗" "Stow packages"
   [[ ${#DRIFT_CLAUDE_SYMLINK[@]} -gt 0 ]] && register_section "💔" "Claude config symlinks"
   [[ ${#DRIFT_ADOPT[@]} -gt 0 ]]          && register_section "🆕" "Claude adoption candidates"
@@ -743,12 +728,12 @@ run_drift_fix() {
 
   fix_section "Brew packages not in Brewfile"      "brew"   "📦" \
     "Track in Brewfile"      do_brew_track  "ctrl-x" "Uninstall"              do_brew_remove   "${DRIFT_BREW[@]}"
-  fix_section "Bun globals not in BUN_GLOBALS"     "bun"    "🥟" \
-    "Track in BUN_GLOBALS"   do_bun_track   "ctrl-x" "Uninstall"              do_bun_remove    "${DRIFT_BUN[@]}"
-  fix_section "uv tools not in UV_TOOLS"           "uv"     "🐍" \
-    "Track in UV_TOOLS"      do_uv_track    "ctrl-x" "Uninstall"              do_uv_remove     "${DRIFT_UV[@]}"
-  fix_section "gh extensions not in GH_EXTENSIONS" "gh"     "🐙" \
-    "Track in GH_EXTENSIONS" do_gh_track    "ctrl-x" "Uninstall"              do_gh_remove     "${DRIFT_GH[@]}"
+  fix_section "Bun globals not in linux/bun-globals.txt"     "bun"    "🥟" \
+    "Track in bun-globals.txt"   do_bun_track   "ctrl-x" "Uninstall"              do_bun_remove    "${DRIFT_BUN[@]}"
+  fix_section "uv tools not in linux/uv-tools.txt"           "uv"     "🐍" \
+    "Track in uv-tools.txt"      do_uv_track    "ctrl-x" "Uninstall"              do_uv_remove     "${DRIFT_UV[@]}"
+  fix_section "gh extensions not in linux/gh-extensions.txt" "gh"     "🐙" \
+    "Track in gh-extensions.txt" do_gh_track    "ctrl-x" "Uninstall"              do_gh_remove     "${DRIFT_GH[@]}"
   fix_section "Stow packages"                      "stow"   "🔗" \
     "Auto-fix (stow / adopt as needed)"  do_unstowed_fix  "" "" "" "${DRIFT_UNSTOWED[@]}"
   fix_section "Claude config symlinks"             "claude" "💔" \
@@ -1217,14 +1202,11 @@ fi
 # bun globals
 # -----------------------------------------------------------------------------
 section 'bun globals'
-BUN_GLOBALS=(
-  @google/clasp @openai/codex @steipete/bird clawdhub happy-dom markdown-pdf
-  marked mcporter md-to-pdf pdfkit playwright puppeteer-core
-  @fission-ai/openspec @earendil-works/pi-coding-agent
-  lefthook
-)
+mapfile -t BUN_GLOBALS < <(manifest_items "$REPO/linux/bun-globals.txt")
 if ! command -v bun &>/dev/null; then
   note '(bun not installed yet — install via Brewfile or curl-bash first)'
+elif [[ ${#BUN_GLOBALS[@]} -eq 0 ]]; then
+  note 'no bun globals tracked'
 elif [[ -n $DRY_RUN ]]; then
   installed=$(bun pm ls -g 2>/dev/null | tr -d ' \t' || true)
   for pkg in "${BUN_GLOBALS[@]}"; do
@@ -1242,9 +1224,11 @@ fi
 # gh extensions
 # -----------------------------------------------------------------------------
 section 'gh extensions'
-GH_EXTENSIONS=(dlvhdr/gh-dash github/gh-copilot)
+mapfile -t GH_EXTENSIONS < <(manifest_items "$REPO/linux/gh-extensions.txt")
 if ! command -v gh &>/dev/null; then
   note '(gh not installed yet — install via Brewfile first)'
+elif [[ ${#GH_EXTENSIONS[@]} -eq 0 ]]; then
+  note 'no gh extensions tracked'
 elif [[ -n $DRY_RUN ]]; then
   ext_list=$(gh extension list 2>/dev/null || true)
   for ext in "${GH_EXTENSIONS[@]}"; do
@@ -1265,9 +1249,11 @@ fi
 # uv tools
 # -----------------------------------------------------------------------------
 section 'uv tools'
-UV_TOOLS=(graphifyy nano-pdf claude-monitor specify-cli)
+mapfile -t UV_TOOLS < <(manifest_items "$REPO/linux/uv-tools.txt")
 if ! command -v uv &>/dev/null; then
   note '(uv not installed yet — install via Brewfile first)'
+elif [[ ${#UV_TOOLS[@]} -eq 0 ]]; then
+  note 'no uv tools tracked'
 elif [[ -n $DRY_RUN ]]; then
   uv_list=$(uv tool list 2>/dev/null || true)
   for tool in "${UV_TOOLS[@]}"; do

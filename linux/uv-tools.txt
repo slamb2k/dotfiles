@@ -1,0 +1,6 @@
+# uv tools managed by setup.sh
+claude-monitor
+graphifyy
+nano-pdf
+specify-cli
+weasyprint
