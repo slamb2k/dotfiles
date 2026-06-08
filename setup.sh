@@ -16,6 +16,12 @@
 # Idempotent. Safe to re-run.
 set -euo pipefail
 
+# Keep setup/stow/perl quiet even before zsh has loaded 00-env.zsh.
+export LANG=${LANG:-C.UTF-8}
+if ! locale -a 2>/dev/null | grep -qx "${LANG}"; then
+  export LANG=C.UTF-8
+fi
+
 # -----------------------------------------------------------------------------
 # Args
 # -----------------------------------------------------------------------------
@@ -478,7 +484,7 @@ do_gh_remove()   { gh extension remove "$1" 2>&1 | sed 's/^/    /' || say_warn "
 do_unstowed_fix() {
   local entry=$1 name=${entry%%|*} state=${entry##*|}
   case $state in
-    missing)           (cd "$REPO" && stow "$name") && say_ok "stowed $name" || say_warn "stow $name failed" ;;
+    missing)           (cd "$REPO" && stow .) && say_ok "stowed repo configs" || say_warn "stow . failed" ;;
     real-path)         (cd "$REPO" && stow --adopt "$name") && say_ok "adopted $name (review with: cd ~/dotfiles && git diff)" || say_warn "adopt $name failed" ;;
     symlink-elsewhere) rm -f "$HOME/.config/$name" && (cd "$REPO" && stow "$name") && say_ok "fixed $name" || say_warn "fix $name failed" ;;
   esac
@@ -1176,7 +1182,7 @@ section 'bun globals'
 BUN_GLOBALS=(
   @google/clasp @openai/codex @steipete/bird clawdhub happy-dom markdown-pdf
   marked mcporter md-to-pdf pdfkit playwright puppeteer-core
-  @fission-ai/openspec
+  @fission-ai/openspec @earendil-works/pi-coding-agent
   lefthook
 )
 if ! command -v bun &>/dev/null; then
@@ -1221,7 +1227,7 @@ fi
 # uv tools
 # -----------------------------------------------------------------------------
 section 'uv tools'
-UV_TOOLS=(graphifyy nano-pdf)
+UV_TOOLS=(graphifyy nano-pdf claude-monitor specify-cli)
 if ! command -v uv &>/dev/null; then
   note '(uv not installed yet — install via Brewfile first)'
 elif [[ -n $DRY_RUN ]]; then

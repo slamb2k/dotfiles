@@ -3,6 +3,9 @@
 --ignore=DS_Store
 --ignore=atuin/*
 
+# ZDOTDIR package is bootstrapped separately
+--ignore=^zshrc$
+
 # Top-level repo machinery — not config files
 --ignore=^install\.(sh|ps1)$
 --ignore=^setup\.(sh|ps1)$
