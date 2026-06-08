@@ -31,10 +31,8 @@ export DOTNET_ROOT="$HOME/.dotnet"
 # opencode
 [[ -d "$HOME/.opencode/bin" ]]            && path=("$HOME/.opencode/bin" $path)
 
-# Go
-export GOROOT=/usr/local/go
+# Go (provided by Homebrew; do not force GOROOT to old /usr/local/go)
 export GOPATH="$HOME/go"
-[[ -d "$GOROOT/bin" ]]                    && path=($path "$GOROOT/bin")
 [[ -d "$GOPATH/bin" ]]                    && path=($path "$GOPATH/bin")
 
 # pnpm
