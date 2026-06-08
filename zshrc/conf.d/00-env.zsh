@@ -2,7 +2,7 @@
 setopt prompt_subst
 
 # Locale + editor
-export LANG=en_US.UTF-8
+export LANG=C.UTF-8
 export EDITOR=nvim
 
 # XDG dirs (be explicit so other tools agree)
