@@ -1,29 +1,59 @@
-add_newline = false
-# A minimal left prompt
-format = """$directory$character"""
+add_newline = true
+
+# Two-line prompt: directory on the top left, current modules on the top right,
+# and the input marker on the bottom. $fill draws the dotted leader.
+format = """[╭](surface2) $directory$fill $all$line_break[╰](surface2)$character"""
+right_format = ""
+
 palette = "catppuccin_mocha"
-# move the rest of the prompt to the right
-right_format = """$all"""
 command_timeout = 1000
 
+# Dotted leader between the directory and the modules that used to be right-aligned
+[fill]
+symbol = "·"
+style = "surface2"
+
 [character]
-vicmd_symbol = "[N] >>>"
-success_symbol = '[➜](bold green)'
+success_symbol = '[❯](bold green)'
+error_symbol = '[❯](bold red)'
+vimcmd_symbol = '[❮](bold green)'
 
 [directory.substitutions]
 '~/tests/starship-custom' = 'work-project'
 
+[username]
+format = '[$user]($style) '
+style_user = 'bold yellow'
+style_root = 'bold red'
+
+[hostname]
+ssh_symbol = '🌐'
+format = '[$ssh_symbol$hostname]($style) '
+style = 'bold green'
+
+[gcloud]
+disabled = true
+format = '[$symbol$account(@$domain)]($style) '
+symbol = '☁ '
+style = 'bold blue'
+
 [git_branch]
 format =  '[$symbol$branch(:$remote_branch)]($style)'
+
+[package]
+disabled = true
+
+[python]
+disabled = true
 
 [aws]
 format = '[$symbol(profile: "$profile" )(\(region: $region\) )]($style)'
 disabled = false
 style = 'bold blue'
-symbol = " "
+symbol = " "
 
 [golang]
-format = '[ ](bold cyan)'
+format = '[ ](bold cyan)'
 
 [kubernetes]
 symbol = '☸ '
@@ -31,7 +61,7 @@ disabled = true
 detect_files = ['Dockerfile']
 format = '[$symbol$context( \($namespace\))]($style) '
 contexts = [
-  { context_pattern = "arn:aws:eks:us-west-2:577926974532:cluster/zd-pvc-omer", style = "green", context_alias = "omerxx", symbol = " " },
+  { context_pattern = "arn:aws:eks:us-west-2:577926974532:cluster/zd-pvc-omer", style = "green", context_alias = "omerxx", symbol = " " },
 ]
 
 [docker_context]

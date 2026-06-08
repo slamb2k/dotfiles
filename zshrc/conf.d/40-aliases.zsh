@@ -67,3 +67,11 @@ alias massdns='~/hacking/tools/massdns/bin/massdns -r ~/hacking/tools/massdns/li
 alias server='python -m http.server 4445'
 alias tunnel='ngrok http 4445'
 alias fuzz='ffuf -w ~/hacking/SecLists/content_discovery_all.txt -mc all -u'
+
+# Claude Code
+alias cc='claude'
+alias ccr='claude -r'
+alias claude-mem='CLAUDE_MEM_WORKER_HOST=0.0.0.0 bun "$HOME/.claude/plugins/cache/thedotmack/claude-mem/10.5.2/scripts/worker-service.cjs"'
+
+# Edit local zsh overrides
+alias zshc="$EDITOR $HOME/.config/zshrc/.zshrc.local"

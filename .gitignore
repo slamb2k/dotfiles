@@ -1,5 +1,6 @@
 .DS_Store
 tmux/plugins/
+tmux/*.bak-*
 raycast
 fzf
 history.txt
@@ -7,3 +8,5 @@ history.txt
 # zsh — completion cache and per-machine overrides
 zshrc/.zcompdump
 zshrc/.zshrc.local
+
+*.swp

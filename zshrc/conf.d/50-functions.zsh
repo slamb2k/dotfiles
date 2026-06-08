@@ -40,3 +40,95 @@ __dotfiles_drift_check() {
 }
 __dotfiles_drift_check
 unset -f __dotfiles_drift_check
+
+# Claude Code helpers
+unalias ccq 2>/dev/null
+ccq() { ~/.claude/scripts/ccq.sh "$@"; }
+
+claude-update-plugins() {
+  emulate -L zsh
+  local failed=0
+
+  echo "Updating marketplaces..."
+  claude plugin marketplace update || failed=1
+
+  echo "Updating plugins..."
+  local -a plugins
+  local plugin
+
+  if command -v jq >/dev/null 2>&1; then
+    plugins=("${(@f)$(claude plugin list --json | jq -r '.[].id')}")
+  else
+    plugins=("${(@f)$(claude plugin list | sed -n 's/^[[:space:]]*❯[[:space:]]*//p')}")
+  fi
+
+  for plugin in "${plugins[@]}"; do
+    [[ -n "$plugin" ]] || continue
+    echo "  - $plugin"
+    claude plugin update "$plugin" || failed=1
+  done
+
+  if (( failed )); then
+    echo "Finished with errors. Restart Claude Code to apply any successful updates."
+    return 1
+  fi
+
+  echo "Done. Restart Claude Code to apply changes."
+}
+claude-update-plugin() { claude-update-plugins "$@"; }
+
+claude-cloud() {
+  ssh vm-alwayson-dev-claude -t "tmux new-session -A -s claude"
+}
+
+ccs() {
+  if [[ $# -eq 0 ]]; then
+    echo "Usage: ccs <project> [project2 ...]" >&2
+    echo "Available: $(ls ~/work/)" >&2
+    return 1
+  fi
+
+  local dirs=()
+  local project dir
+  for project in "$@"; do
+    dir="$HOME/work/$project"
+    if [[ ! -d "$dir" ]]; then
+      echo "Directory not found: $dir" >&2
+      return 1
+    fi
+    dirs+=("$dir")
+  done
+
+  tmux new-window -n "claude-multi" -c "${dirs[1]}" "claude"
+  for dir in "${dirs[@]:1}"; do
+    tmux split-window -t "claude-multi" -c "$dir" "claude"
+    tmux select-layout -t "claude-multi" tiled
+  done
+}
+
+ccl() {
+  echo "Claude Code sessions:"
+  tmux list-panes -a -F '  #{window_name} | #{pane_current_command} | #{pane_current_path}' 2>/dev/null \
+    | grep -i claude
+  local count
+  count=$(tmux list-panes -a -F '#{pane_current_command}' 2>/dev/null | grep -ci claude || true)
+  echo "  ($count active)"
+}
+
+# Remote VS Code: open current Linux path from the workstation via SSH.
+code() {
+  local target="${1:-.}" abs
+  abs="$(cd "$target" 2>/dev/null && pwd)" || { echo "no such dir: $target" >&2; return 1; }
+  # WORKSTATION = SSH host alias on the VM pointing at your Win11 box's tailnet name
+  # REMOTE_ALIAS must match a Host entry in the WORKSTATION's ~/.ssh/config
+  local WORKSTATION="velrada-pc" REMOTE_ALIAS="vm-always"
+  ssh "$WORKSTATION" "code --remote ssh-remote+${REMOTE_ALIAS} \"${abs}\""
+}
+
+# tmux: swallow stray paste bytes that arrive after a command finishes.
+zle-line-init() {
+  if [[ -n "$TMUX" ]]; then
+    while read -t 0.05 -k 1 2>/dev/null; do :; done
+  fi
+}
+zle -N zle-line-init
