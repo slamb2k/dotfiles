@@ -475,11 +475,21 @@ do_unstowed_fix() {
   esac
 }
 
+# Stow the home-targeted claude package, then run its per-machine registrar to
+# merge non-symlinkable bits (PreToolUse hook entries) into ~/.claude/settings.json
+# — which we keep as a per-machine real file because Claude rewrites it
+# atomically. The registrar is idempotent, so this is safe on every restow.
+stow_claude() {
+  stow --target="$HOME" -d "$REPO" claude || return 1
+  [[ -x "$REPO/claude/install.sh" ]] && bash "$REPO/claude/install.sh" >/dev/null
+  return 0
+}
+
 absorb_claude_file() {
   local rel=$1
   mkdir -p "$(dirname "$REPO/claude/.claude/$rel")"
   mv "$HOME/.claude/$rel" "$REPO/claude/.claude/$rel" \
-    && stow --target="$HOME" -d "$REPO" claude \
+    && stow_claude \
     && say_ok "absorbed claude/$rel" \
     || say_warn "absorb claude/$rel failed"
 }
@@ -488,8 +498,8 @@ do_claude_fix() {
   local entry=$1 rel=${entry%%|*} state=${entry##*|}
   case $state in
     real-file)         absorb_claude_file "$rel" ;;
-    missing)           stow --target="$HOME" -d "$REPO" claude && say_ok "restowed claude/$rel" || say_warn "restow failed" ;;
-    symlink-elsewhere) rm -f "$HOME/.claude/$rel" && stow --target="$HOME" -d "$REPO" claude && say_ok "fixed claude/$rel" || say_warn "fix failed" ;;
+    missing)           stow_claude && say_ok "restowed claude/$rel" || say_warn "restow failed" ;;
+    symlink-elsewhere) rm -f "$HOME/.claude/$rel" && stow_claude && say_ok "fixed claude/$rel" || say_warn "fix failed" ;;
   esac
 }
 
@@ -497,7 +507,7 @@ do_adopt() {
   local path=$1 sub=${path%/*}
   mkdir -p "$REPO/claude/.claude/$sub"
   mv "$HOME/.claude/$path" "$REPO/claude/.claude/$path" \
-    && stow --target="$HOME" -d "$REPO" claude \
+    && stow_claude \
     && say_ok "adopted $path" \
     || say_warn "adopt $path failed"
 }
