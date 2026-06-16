@@ -10,3 +10,9 @@ zshrc/.zcompdump
 zshrc/.zshrc.local
 
 *.swp
+
+# The global ~/.config/git/ignore ignores `.claude/` everywhere (to keep
+# ~/.claude noise out of project trees). This repo intentionally tracks a
+# Claude stow package, so re-include it here.
+!claude/.claude/
+!claude/.claude/**
