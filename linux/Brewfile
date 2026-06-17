@@ -24,6 +24,7 @@
 # tap "anthropics/claude"        # Reserved for an official Anthropic tap if/when it exists
 tap "hashicorp/tap"              # terraform, vault, packer, consul
 tap "oven-sh/bun"                # bun runtime
+tap "felipeelias/tap"            # claude-statusline
 
 # =============================================================================
 # Core CLI (cross-platform parity with the macOS Brewfile)
@@ -67,6 +68,7 @@ brew "tmux"
 # Shell / prompt / history
 # =============================================================================
 brew "starship"                  # currently in /usr/local/bin (manual install)
+brew "claude-statusline"         # Claude Code status line (config in dotfiles/claude-statusline)
 brew "zsh-autosuggestions"       # sourced by zshrc/conf.d/10-completions.zsh
 brew "atuin"                     # shell-history sync (currently MISSING)
 brew "direnv"                    # .envrc per-dir env (referenced by .zshrc, currently MISSING)

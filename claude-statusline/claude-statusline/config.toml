@@ -1,0 +1,22 @@
+# claude-statusline configuration
+# Docs: https://github.com/felipeelias/claude-statusline
+# Managed in dotfiles (Stow package: claude-statusline). Preview presets with
+# `claude-statusline themes`; validate edits with `claude-statusline test`.
+
+# Catppuccin Mocha powerline preset (needs a Nerd Font, which this box has).
+preset = "catppuccin"
+
+# Layout. Modules are referenced with $name. session_timer is appended below.
+format = "$directory | $git_branch | $model | $cost | $context | $session_timer"
+
+[cost]
+thresholds = [
+  { above = 2.0,  style = "yellow" },
+  { above = 10.0, style = "red" },
+]
+
+[context]
+bar_width = 10
+
+[session_timer]
+disabled = false
