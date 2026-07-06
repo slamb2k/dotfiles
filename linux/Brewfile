@@ -186,3 +186,6 @@ brew "go"                        # provides go itself
 # DSC / SOPs (extras)
 # =============================================================================
 # brew "1password-cli"           # if 1Password is part of your secrets flow
+brew "aws-vault"
+brew "azrl"
+brew "herdr"

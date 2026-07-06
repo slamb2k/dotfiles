@@ -2,6 +2,7 @@
 @earendil-works/pi-coding-agent
 @fission-ai/openspec
 @google/clasp
+@mermaid-js/mermaid-cli
 @openai/codex
 @steipete/bird
 azurite

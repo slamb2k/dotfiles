@@ -75,3 +75,6 @@ alias claude-mem='CLAUDE_MEM_WORKER_HOST=0.0.0.0 bun "$HOME/.claude/plugins/cach
 
 # Edit local zsh overrides
 alias zshc="$EDITOR $HOME/.config/zshrc/.zshrc.local"
+
+# Homebrew
+alias brewup='brew update && brew upgrade --yes && brew cleanup'

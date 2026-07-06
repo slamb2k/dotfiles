@@ -80,3 +80,5 @@ target/
 .cursor/
 .gemini/
 CLAUDE.md.backup
+.azprofile
+.envrc

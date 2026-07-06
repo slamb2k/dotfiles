@@ -3,20 +3,36 @@
 # Managed in dotfiles (Stow package: claude-statusline). Preview presets with
 # `claude-statusline themes`; validate edits with `claude-statusline test`.
 
-# Catppuccin Mocha powerline preset (needs a Nerd Font, which this box has).
-preset = "catppuccin"
+# Custom theme tuned for readability on a dark terminal: bold near-white text on
+# solid, dark segment backgrounds, no pipes. The first block runs flush to the
+# left wall. Each block's rounded right cap (U+E0B4) is filled with that block's
+# colour and painted OVER the next block's background, giving a continuous
+# scalloped powerline; the last cap sits on the terminal background. The context
+# bar uses a hatched-square fill (U+25A8) / hollow-square empty (U+25A2) so it
+# reads as a textured material rather than a plain block. Built on tokyo-night
+# so the module CONTENT formats (git icon, padding, context bar, model name) are
+# inherited; only the layout and colours are overridden.
+preset = "tokyo-night"
 
-# Layout. Modules are referenced with $name. session_timer is appended below.
-format = "$directory | $git_branch | $model | $cost | $context | $session_timer"
+format = "$directory[](fg:#1e3a8a bg:#134e4a)$git_branch[](fg:#134e4a bg:#312e81)$model[](fg:#312e81 bg:#78350f)$cost[](fg:#78350f bg:#1e293b)$context[](fg:#1e293b)"
+
+[directory]
+style = "fg:#ffffff bg:#1e3a8a bold"
+
+[git_branch]
+style = "fg:#ffffff bg:#134e4a"
+
+[model]
+style = "fg:#ffffff bg:#312e81 bold"
 
 [cost]
-thresholds = [
-  { above = 2.0,  style = "yellow" },
-  { above = 10.0, style = "red" },
-]
+# Clear tokyo-night's inherited cost thresholds so the solid amber background
+# always fills the segment (matching the cap) regardless of the dollar value.
+thresholds = []
+style = "fg:#ffffff bg:#78350f"
 
 [context]
+style = "fg:#ffffff bg:#1e293b"
 bar_width = 10
-
-[session_timer]
-disabled = false
+bar_fill = "▨"
+bar_empty = "▢"
