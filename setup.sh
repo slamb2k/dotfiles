@@ -231,7 +231,28 @@ run_drift_check() {
     drift_section "gh extensions not in linux/gh-extensions.txt" "$(count_lines "$drift")" "$drift" "🐙" "$C_YELLOW"
   fi
 
-  # 5. Dotfiles packages that aren't symlinked into ~/.config (forgot to stow?)
+  # 5. Dotfiles packages that aren't represented under ~/.config.
+  #    Stow may either replace ~/.config/<package> with a directory symlink OR
+  #    leave a real directory containing per-file symlinks, especially when the
+  #    app writes runtime state beside managed config. Treat both as stowed.
+  package_files_stowed() {
+    local entry=$1 name=${entry##*/} f rel target
+    local found=0
+    while IFS= read -r -d '' f; do
+      found=1
+      rel=${f#$entry/}
+      target="$HOME/.config/$name/$rel"
+      if [[ -e $target ]]; then
+        # Accept either a direct file symlink or a path that traverses a
+        # symlinked parent directory; both resolve to the managed repo file.
+        [[ "$(readlink -f "$target")" == "$(readlink -f "$f")" ]] || return 1
+      else
+        return 1
+      fi
+    done < <(find "$entry" -type f -print0)
+    [[ $found -eq 1 ]]
+  }
+
   local unstowed=""
   for entry in "$REPO"/*; do
     local name=${entry##*/}
@@ -242,7 +263,10 @@ run_drift_check() {
       unstowed+="$name (symlink points elsewhere)"$'\n'
       DRIFT_UNSTOWED+=("$name|symlink-elsewhere")
     elif [[ -e $target ]]; then
-      unstowed+="$name (real path at ~/.config/$name — use \`stow --adopt $name\`)"$'\n'
+      if [[ -d $target ]] && package_files_stowed "$entry"; then
+        continue
+      fi
+      unstowed+="$name (real path at ~/.config/$name with unmanaged/mislinked package files — use \`stow --adopt $name\` or fix symlinks)"$'\n'
       DRIFT_UNSTOWED+=("$name|real-path")
     else
       unstowed+="$name (not stowed — run \`cd ~/dotfiles && stow $name\`)"$'\n'
