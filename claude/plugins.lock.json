@@ -1,0 +1,187 @@
+{
+  "marketplaces": {
+    "anthropic-agent-skills": {
+      "autoUpdate": true,
+      "source": {
+        "repo": "anthropics/skills",
+        "source": "github"
+      }
+    },
+    "claude-hud": {
+      "autoUpdate": true,
+      "source": {
+        "repo": "jarrodwatts/claude-hud",
+        "source": "github"
+      }
+    },
+    "omc": {
+      "source": {
+        "source": "git",
+        "url": "https://github.com/Yeachan-Heo/oh-my-claudecode.git"
+      }
+    },
+    "ponytail": {
+      "source": {
+        "repo": "DietrichGebert/ponytail",
+        "source": "github"
+      }
+    },
+    "power-platform-skills": {
+      "source": {
+        "repo": "microsoft/power-platform-skills",
+        "source": "github"
+      }
+    },
+    "slamb2k": {
+      "autoUpdate": true,
+      "source": {
+        "repo": "slamb2k/mad-skills",
+        "source": "github"
+      }
+    },
+    "thedotmack": {
+      "source": {
+        "repo": "thedotmack/claude-mem",
+        "source": "github"
+      }
+    }
+  },
+  "plugins": {
+    "claude-code-setup@claude-plugins-official": {
+      "enabled": true,
+      "scopes": [
+        "user"
+      ],
+      "versions": [
+        "1.0.0"
+      ]
+    },
+    "claude-hud@claude-hud": {
+      "enabled": false,
+      "scopes": [
+        "user"
+      ],
+      "versions": [
+        "0.3.0"
+      ]
+    },
+    "claude-mem@thedotmack": {
+      "enabled": false,
+      "scopes": [
+        "user"
+      ],
+      "versions": [
+        "10.5.2"
+      ]
+    },
+    "code-review@claude-plugins-official": {
+      "enabled": true,
+      "scopes": [
+        "user"
+      ]
+    },
+    "code-simplifier@claude-plugins-official": {
+      "enabled": true,
+      "scopes": [
+        "user"
+      ],
+      "versions": [
+        "1.0.0"
+      ]
+    },
+    "commit-commands@claude-plugins-official": {
+      "enabled": true,
+      "scopes": [
+        "user"
+      ]
+    },
+    "context7@claude-plugins-official": {
+      "enabled": true,
+      "scopes": [
+        "user"
+      ]
+    },
+    "example-skills@anthropic-agent-skills": {
+      "enabled": false,
+      "scopes": [
+        "user"
+      ],
+      "versions": [
+        "9d2f1ae18723"
+      ]
+    },
+    "feature-dev@claude-plugins-official": {
+      "enabled": true,
+      "scopes": [
+        "user"
+      ]
+    },
+    "frontend-design@claude-plugins-official": {
+      "enabled": true,
+      "scopes": [
+        "user"
+      ]
+    },
+    "hookify@claude-plugins-official": {
+      "enabled": false,
+      "scopes": [
+        "user"
+      ]
+    },
+    "mad-skills@slamb2k": {
+      "enabled": true,
+      "scopes": [
+        "user"
+      ],
+      "versions": [
+        "2.0.60"
+      ]
+    },
+    "model-apps@power-platform-skills": {
+      "enabled": false,
+      "scopes": [
+        "local"
+      ],
+      "versions": [
+        "2.2.0"
+      ]
+    },
+    "oh-my-claudecode@omc": {
+      "enabled": false,
+      "scopes": [
+        "user"
+      ],
+      "versions": [
+        "4.9.3"
+      ]
+    },
+    "ponytail@ponytail": {
+      "enabled": true,
+      "scopes": [
+        "user"
+      ],
+      "versions": [
+        "4.8.4"
+      ]
+    },
+    "ralph-loop@claude-plugins-official": {
+      "enabled": false,
+      "scopes": [
+        "project"
+      ],
+      "versions": [
+        "1.0.0"
+      ]
+    },
+    "superpowers@claude-plugins-official": {
+      "enabled": true,
+      "scopes": [
+        "user"
+      ],
+      "versions": [
+        "6.1.1"
+      ]
+    }
+  },
+  "version": 1
+}

@@ -152,6 +152,7 @@ DRIFT_BREW=() DRIFT_BUN=() DRIFT_UV=() DRIFT_GH=()
 DRIFT_UNSTOWED=()        # entries: "name|state"  state ∈ {missing,real-path,symlink-elsewhere}
 DRIFT_CLAUDE_SYMLINK=()  # entries: "rel|state"   state ∈ {missing,real-file,symlink-elsewhere}
 DRIFT_ADOPT=()           # entries: "skills/foo"
+DRIFT_CLAUDE_LOCKS=()    # entries: "id|state"     state ∈ {missing,broken,drift}
 DRIFT_CONFIG_DIRS=()     # entries: "name"         (untracked ~/.config/<name>)
 DRIFT_UNCOMMITTED_COUNT=0
 DRIFT_UNPUSHED_COUNT=0
@@ -251,69 +252,39 @@ run_drift_check() {
   unstowed=${unstowed%$'\n'}
   drift_section "dotfiles packages not stowed" "$(count_lines "$unstowed")" "$unstowed" "🔗" "$C_RED"
 
-  # 6. Claude home-targeted package — verify each managed file is still a symlink
-  #    pointing into the repo (atomic-write tools can replace symlinks with real files).
-  local claude_drift=""
-  if [[ -d $REPO/claude/.claude ]]; then
-    while IFS= read -r -d '' f; do
-      local rel=${f#$REPO/claude/.claude/}
-      local target=$HOME/.claude/$rel
-      if [[ -L $target ]]; then
-        [[ "$(readlink -f "$target")" == "$(readlink -f "$f")" ]] && continue
-        claude_drift+="$rel (symlink points elsewhere)"$'\n'
-        DRIFT_CLAUDE_SYMLINK+=("$rel|symlink-elsewhere")
-      elif [[ -e $target ]]; then
-        claude_drift+="$rel (real file — atomic write replaced symlink; mv into package + restow)"$'\n'
-        DRIFT_CLAUDE_SYMLINK+=("$rel|real-file")
-      else
-        claude_drift+="$rel (missing — run \`cd ~/dotfiles && stow --target=\$HOME -d ~/dotfiles claude\`)"$'\n'
-        DRIFT_CLAUDE_SYMLINK+=("$rel|missing")
-      fi
-    done < <(find "$REPO/claude/.claude" -type f -print0)
+  # 6. Claude package-specific drift. The Claude package owns its own
+  #    validation rules because settings/skills/plugins have app-specific
+  #    semantics that do not belong in the top-level orchestrator.
+  local claude_symlinks="" claude_adopt="" claude_locks=""
+  if [[ -x $REPO/claude/validate.sh ]]; then
+    local type id state message
+    while IFS=$'\t' read -r type id state message; do
+      [[ -z ${type:-} ]] && continue
+      case $type in
+        symlink)
+          claude_symlinks+="$message"$'\n'
+          DRIFT_CLAUDE_SYMLINK+=("$id|$state")
+          ;;
+        adopt)
+          claude_adopt+="$message"$'\n'
+          DRIFT_ADOPT+=("$id")
+          ;;
+        lock)
+          claude_locks+="$message"$'\n'
+          DRIFT_CLAUDE_LOCKS+=("$id|$state")
+          ;;
+      esac
+    done < <(DOTFILES_REPO="$REPO" "$REPO/claude/validate.sh")
   fi
-  claude_drift=${claude_drift%$'\n'}
-  drift_section "claude config symlinks broken" "$(count_lines "$claude_drift")" "$claude_drift" "💔" "$C_RED"
-
-  # 7. Adoption candidates — entries under ~/.claude/{skills,agents,hooks}/ that
-  #    aren't yet stowed. Filterable via ~/dotfiles/.adopt-ignore (one path or
-  #    glob per line, e.g. `skills/gsd-*`). Lines starting with # are comments.
-  local IGNORE_FILE="$REPO/.adopt-ignore"
-  is_ignored() {
-    [[ -f $IGNORE_FILE ]] || return 1
-    local path=$1 pattern
-    while IFS= read -r pattern; do
-      [[ -z $pattern || $pattern == \#* ]] && continue
-      # shellcheck disable=SC2053  # right-hand side is a glob, not a string
-      [[ $path == $pattern ]] && return 0
-    done < "$IGNORE_FILE"
-    return 1
-  }
-
-  local adopt_candidates=""
-  for sub in skills agents hooks; do
-    local live_dir="$HOME/.claude/$sub"
-    local pkg_dir="$REPO/claude/.claude/$sub"
-    [[ -d $live_dir ]] || continue
-    for entry in "$live_dir"/*; do
-      [[ -e $entry ]] || continue
-      local name=${entry##*/}
-      # Already managed (symlink into our package)?
-      if [[ -L $entry ]] && [[ "$(readlink -f "$entry")" == "$pkg_dir/$name" ]]; then
-        continue
-      fi
-      # Already present in the package?
-      [[ -e "$pkg_dir/$name" ]] && continue
-      # Dismissed via .adopt-ignore?
-      is_ignored "$sub/$name" && continue
-      adopt_candidates+="$sub/$name"$'\n'
-      DRIFT_ADOPT+=("$sub/$name")
-    done
-  done
-  adopt_candidates=${adopt_candidates%$'\n'}
+  claude_symlinks=${claude_symlinks%$'\n'}
+  drift_section "claude config symlinks broken" "$(count_lines "$claude_symlinks")" "$claude_symlinks" "💔" "$C_RED"
+  claude_adopt=${claude_adopt%$'\n'}
   drift_section "claude adoption candidates (mv into ~/dotfiles/claude/.claude/<sub>/ + restow, or add to ~/dotfiles/.adopt-ignore)" \
-    "$(count_lines "$adopt_candidates")" "$adopt_candidates" "🆕" "$C_CYAN"
+    "$(count_lines "$claude_adopt")" "$claude_adopt" "🆕" "$C_CYAN"
+  claude_locks=${claude_locks%$'\n'}
+  drift_section "claude reproducibility locks" "$(count_lines "$claude_locks")" "$claude_locks" "🔒" "$C_YELLOW"
 
-  # 8. Real (non-symlink) dirs in ~/.config with no matching dotfiles entry.
+  # 9. Real (non-symlink) dirs in ~/.config with no matching dotfiles entry.
   #    Capped at 10 — there's always a long tail of app-default configs.
   #    Filterable via ~/dotfiles/.config-ignore (one name or glob per line).
   local CONFIG_IGNORE_FILE="$REPO/.config-ignore"
@@ -341,7 +312,7 @@ run_drift_check() {
   candidates=${candidates%$'\n'}
   drift_section "untracked ~/.config dirs (potential new dotfiles, top 10)" "$(count_lines "$candidates")" "$candidates" "📁" "$C_DIM"
 
-  # 9. Uncommitted changes in the dotfiles repo working tree
+  # 10. Uncommitted changes in the dotfiles repo working tree
   if [[ -d $REPO/.git ]]; then
     local porcelain
     # Collapse git's two-char XY status to a single status character —
@@ -358,7 +329,7 @@ run_drift_check() {
         "$DRIFT_UNCOMMITTED_COUNT" "$porcelain" "📝" "$C_YELLOW"
     fi
 
-    # 10. Local commits not yet pushed to origin
+    # 11. Local commits not yet pushed to origin
     if git -C "$REPO" rev-parse --abbrev-ref '@{u}' &>/dev/null; then
       local ahead ahead_log
       ahead=$(git -C "$REPO" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)
@@ -475,46 +446,30 @@ do_unstowed_fix() {
   esac
 }
 
-# Stow the home-targeted claude package, then run its per-machine registrar to
-# merge non-symlinkable bits (PreToolUse hook entries) into ~/.claude/settings.json
-# — which we keep as a per-machine real file because Claude rewrites it
-# atomically. The registrar is idempotent, so this is safe on every restow.
+# Stow the home-targeted claude package, then delegate mutable Claude-specific
+# reconciliation to the package-local apply script.
 stow_claude() {
   stow --target="$HOME" -d "$REPO" claude || return 1
-  [[ -x "$REPO/claude/install.sh" ]] && bash "$REPO/claude/install.sh" >/dev/null
+  [[ -x "$REPO/claude/apply.sh" ]] && bash "$REPO/claude/apply.sh" >/dev/null
   return 0
-}
-
-absorb_claude_file() {
-  local rel=$1
-  mkdir -p "$(dirname "$REPO/claude/.claude/$rel")"
-  mv "$HOME/.claude/$rel" "$REPO/claude/.claude/$rel" \
-    && stow_claude \
-    && say_ok "absorbed claude/$rel" \
-    || say_warn "absorb claude/$rel failed"
 }
 
 do_claude_fix() {
   local entry=$1 rel=${entry%%|*} state=${entry##*|}
-  case $state in
-    real-file)         absorb_claude_file "$rel" ;;
-    missing)           stow_claude && say_ok "restowed claude/$rel" || say_warn "restow failed" ;;
-    symlink-elsewhere) rm -f "$HOME/.claude/$rel" && stow_claude && say_ok "fixed claude/$rel" || say_warn "fix failed" ;;
-  esac
+  DOTFILES_REPO="$REPO" "$REPO/claude/fix.sh" symlink "$rel" "$state" default
 }
 
 do_adopt() {
-  local path=$1 sub=${path%/*}
-  mkdir -p "$REPO/claude/.claude/$sub"
-  mv "$HOME/.claude/$path" "$REPO/claude/.claude/$path" \
-    && stow_claude \
-    && say_ok "adopted $path" \
-    || say_warn "adopt $path failed"
+  DOTFILES_REPO="$REPO" "$REPO/claude/fix.sh" adopt "$1" candidate default
 }
 
 do_adopt_ignore() {
-  printf "%s\n" "$1" >> "$REPO/.adopt-ignore"
-  say_ok "added $1 to .adopt-ignore"
+  DOTFILES_REPO="$REPO" "$REPO/claude/fix.sh" adopt "$1" candidate ignore
+}
+
+do_claude_lock_fix() {
+  local entry=$1 id=${entry%%|*} state=${entry##*|}
+  DOTFILES_REPO="$REPO" "$REPO/claude/fix.sh" lock "$id" "$state" default
 }
 
 do_config_adopt() {
@@ -698,7 +653,8 @@ fix_section() {
 run_drift_fix() {
   local total=$((${#DRIFT_BREW[@]} + ${#DRIFT_BUN[@]} + ${#DRIFT_UV[@]} + ${#DRIFT_GH[@]} \
                + ${#DRIFT_UNSTOWED[@]} + ${#DRIFT_CLAUDE_SYMLINK[@]} + ${#DRIFT_ADOPT[@]} \
-               + ${#DRIFT_CONFIG_DIRS[@]} + DRIFT_UNCOMMITTED_COUNT + DRIFT_UNPUSHED_COUNT))
+               + ${#DRIFT_CLAUDE_LOCKS[@]} + ${#DRIFT_CONFIG_DIRS[@]} \
+               + DRIFT_UNCOMMITTED_COUNT + DRIFT_UNPUSHED_COUNT))
   if [[ $total -eq 0 ]]; then return 0; fi
   if [[ ! -t 0 ]]; then
     printf "%s⚠️ --fix requires an interactive terminal.%s\n" "$C_YELLOW" "$C_RESET" >&2
@@ -725,6 +681,7 @@ run_drift_fix() {
   [[ ${#DRIFT_UNSTOWED[@]} -gt 0 ]]       && register_section "🔗" "Stow packages"
   [[ ${#DRIFT_CLAUDE_SYMLINK[@]} -gt 0 ]] && register_section "💔" "Claude config symlinks"
   [[ ${#DRIFT_ADOPT[@]} -gt 0 ]]          && register_section "🆕" "Claude adoption candidates"
+  [[ ${#DRIFT_CLAUDE_LOCKS[@]} -gt 0 ]]   && register_section "🔒" "Claude reproducibility locks"
   [[ ${#DRIFT_CONFIG_DIRS[@]} -gt 0 ]]    && register_section "📁" "Untracked ~/.config dirs"
   [[ $DRIFT_UNCOMMITTED_COUNT -gt 0 ]]    && register_section "📝" "Uncommitted dotfiles changes"
   [[ $DRIFT_UNPUSHED_COUNT -gt 0 ]]       && register_section "📤" "Unpushed dotfiles commits"
@@ -750,6 +707,8 @@ run_drift_fix() {
     "Auto-fix (restore symlinks)"        do_claude_fix    "" "" "" "${DRIFT_CLAUDE_SYMLINK[@]}"
   fix_section "Claude adoption candidates"         "adopt"  "🆕" \
     "Adopt into dotfiles"    do_adopt       "ctrl-x" "Ignore (.adopt-ignore)" do_adopt_ignore  "${DRIFT_ADOPT[@]}"
+  fix_section "Claude reproducibility locks"       "locks"  "🔒" \
+    "Generate/fix lock"      do_claude_lock_fix "" "" "" "${DRIFT_CLAUDE_LOCKS[@]}"
   fix_section "Untracked ~/.config dirs"           "config" "📁" \
     "Adopt into dotfiles (mv + stow)" do_config_adopt "ctrl-x" "Ignore (.config-ignore)" do_config_ignore "${DRIFT_CONFIG_DIRS[@]}"
 
@@ -1203,9 +1162,10 @@ if [[ ! -d ~/dotfiles/claude ]]; then
   note '(no claude package in dotfiles — skipping)'
 elif [[ -n $DRY_RUN ]]; then
   stow -nv --target="$HOME" -d "$HOME/dotfiles" claude 2>&1 | sed 's/^/  /'
+  would "bash $HOME/dotfiles/claude/apply.sh"
 else
   mkdir -p ~/.claude
-  stow --target="$HOME" -d "$HOME/dotfiles" claude
+  stow_claude
 fi
 
 # -----------------------------------------------------------------------------

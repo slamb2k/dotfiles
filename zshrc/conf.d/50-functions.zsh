@@ -133,79 +133,8 @@ zle-line-init() {
 }
 zle -N zle-line-init
 
-# Azure CLI profile login helper. Tenant-specific aliases live in .zshrc.local.
-# Browser redirect flow must be launched from local WSL so we can forward the
-# Azure CLI localhost callback port from the VM back to the browser machine.
-__azlogin_redirect_port() {
-  sed -nE 's/.*localhost:([0-9]+).*/\1/p' | head -1
-}
-
-__azlogin_login_url() {
-  grep -oE 'https://login\.microsoftonline\.com/[^[:space:]"'"'"']+' | head -1
-}
-
-azlogin() {
-  local name="$1" tenant="$2"
-  [[ -z "$name" || -z "$tenant" ]] && { print "usage: azlogin <profile> <tenant>"; return 1; }
-
-  if __is_vm; then
-    print "azlogin browser redirect mode must be run from local WSL, not from inside the VM." >&2
-    print "Reason: Azure redirects to localhost on the browser machine; local WSL creates the required SSH -L forward." >&2
-    return 1
-  fi
-  [[ -z ${VM_HOST:-} ]] && { print "VM_HOST is not set; define it in .zshrc.local" >&2; return 1; }
-
-  local port="" fwd_pid="" line url found_port
-  ssh "$VM_HOST" \
-    "BROWSER=echo AZURE_CONFIG_DIR=\$HOME/.azure-profiles/$name az login --tenant '$tenant' --debug" 2>&1 |
-  while IFS= read -r line; do
-    url=$(print -r -- "$line" | __azlogin_login_url)
-    [[ -n "$url" ]] && print -- "OPEN: $url"
-
-    if [[ -z "$port" && "$line" == *"localhost:"* && "$line" == *redirect_uri* ]]; then
-      found_port=$(print -r -- "$line" | __azlogin_redirect_port)
-      if [[ -n "$found_port" ]]; then
-        port="$found_port"
-        ssh -N -L "${port}:localhost:${port}" "$VM_HOST" >/dev/null 2>&1 &
-        fwd_pid=$!
-        print -- ">> forwarding localhost:${port} -> ${VM_HOST} (pid ${fwd_pid})"
-      fi
-    fi
-  done
-
-  [[ -n "$fwd_pid" ]] && kill "$fwd_pid" 2>/dev/null
-}
-
-azlogin-debug() {
-  local name="$1" tenant="$2"
-  [[ -z "$name" || -z "$tenant" ]] && { print "usage: azlogin-debug <profile> <tenant>"; return 1; }
-
-  if __is_vm; then
-    print "azlogin-debug browser redirect mode must be run from local WSL, not from inside the VM." >&2
-    print "Run from local WSL so the SSH -L callback forward can be created." >&2
-    return 1
-  fi
-  [[ -z ${VM_HOST:-} ]] && { print "VM_HOST is not set; define it in .zshrc.local" >&2; return 1; }
-
-  local port="" fwd_pid="" line url found_port log="$HOME/azlogin-$name.log"
-  ssh -v "$VM_HOST" \
-    "BROWSER=echo AZURE_CONFIG_DIR=\$HOME/.azure-profiles/$name az login --tenant '$tenant' --debug" 2>&1 |
-  tee "$log" |
-  while IFS= read -r line; do
-    url=$(print -r -- "$line" | __azlogin_login_url)
-    [[ -n "$url" ]] && print -- "OPEN: $url"
-
-    if [[ -z "$port" && "$line" == *"localhost:"* && "$line" == *redirect_uri* ]]; then
-      found_port=$(print -r -- "$line" | __azlogin_redirect_port)
-      if [[ -n "$found_port" ]]; then
-        port="$found_port"
-        ssh -N -L "${port}:localhost:${port}" "$VM_HOST" >/dev/null 2>&1 &
-        fwd_pid=$!
-        print -- ">> forwarding localhost:${port} -> ${VM_HOST} (pid ${fwd_pid})"
-      fi
-    fi
-  done
-
-  [[ -n "$fwd_pid" ]] && kill "$fwd_pid" 2>/dev/null
-  print -- "debug log: $log"
-}
+# azlogin/azlogin-debug retired 2026-07-08 — superseded by azrl (browser
+# bridge, profile bookkeeping, git credential integration). Sign in with
+# `azrl login <profile>` on the VM; it bridges the browser automatically.
+azlogin() { print "azlogin retired — run \`azrl login <profile>\` instead (azrl bridges the browser)" >&2; return 1 }
+azlogin-debug() { azlogin }

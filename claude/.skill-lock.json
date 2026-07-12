@@ -1,0 +1,221 @@
+{
+  "version": 3,
+  "skills": {
+    "web-animation-design": {
+      "source": "connorads/dotfiles",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/connorads/dotfiles.git",
+      "skillPath": ".agents/skills/web-animation-design/SKILL.md",
+      "skillFolderHash": "f13439a96e9eaefae065956de9ed16293c0e8a05",
+      "installedAt": "2026-03-04T06:10:26.526Z",
+      "updatedAt": "2026-03-04T06:10:26.526Z"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/vercel-labs/skills.git",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "skillFolderHash": "c2f31172b6f256272305a5e6e7228b258446899f",
+      "installedAt": "2026-03-04T06:10:39.096Z",
+      "updatedAt": "2026-03-04T06:10:39.096Z"
+    },
+    "dataverse-web-api": {
+      "source": "danielkerridge/claude-code-power-platform-skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/danielkerridge/claude-code-power-platform-skills.git",
+      "skillPath": "dataverse-web-api/SKILL.md",
+      "skillFolderHash": "acf40c6a85b2ac57cb3569f55d2a33e9109959d1",
+      "installedAt": "2026-03-04T06:11:14.083Z",
+      "updatedAt": "2026-03-04T06:11:14.083Z"
+    },
+    "power-apps-code-apps": {
+      "source": "chumleesockson/power-apps-code-apps-skill",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/chumleesockson/power-apps-code-apps-skill.git",
+      "skillPath": "power-apps-code-apps/SKILL.md",
+      "skillFolderHash": "81e24b85e134b6d2dd218d1ca56e3ac1efc61f6b",
+      "installedAt": "2026-03-04T06:12:04.050Z",
+      "updatedAt": "2026-03-04T06:12:04.050Z"
+    },
+    "dataverse-plugins": {
+      "source": "danielkerridge/claude-code-power-platform-skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/danielkerridge/claude-code-power-platform-skills.git",
+      "skillPath": "dataverse-plugins/SKILL.md",
+      "skillFolderHash": "845c0267dde0432feb137804dd70299d4f6a26c7",
+      "installedAt": "2026-03-04T06:12:32.936Z",
+      "updatedAt": "2026-03-04T06:12:32.936Z"
+    },
+    "deep-research": {
+      "source": "199-biotechnologies/claude-deep-research-skill",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/199-biotechnologies/claude-deep-research-skill.git",
+      "skillPath": "SKILL.md",
+      "skillFolderHash": "a725f9afa22880b367767c1639e3e956fe7d983f",
+      "installedAt": "2026-03-04T06:12:58.084Z",
+      "updatedAt": "2026-03-08T21:33:43.805Z"
+    },
+    "audit-website": {
+      "source": "squirrelscan/skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/squirrelscan/skills.git",
+      "skillPath": "audit-website/SKILL.md",
+      "skillFolderHash": "ec491d7739b80f4c64126ae674384cbbcac953ae",
+      "installedAt": "2026-03-04T06:13:19.544Z",
+      "updatedAt": "2026-03-04T06:13:19.544Z"
+    },
+    "bencium-innovative-ux-designer": {
+      "source": "bencium/bencium-claude-code-design-skill",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/bencium/bencium-claude-code-design-skill.git",
+      "skillPath": "bencium-innovative-ux-designer/skills/bencium-innovative-ux-designer/SKILL.md",
+      "skillFolderHash": "7522022b467f03e9d7f1048e6e9884be16c99c42",
+      "installedAt": "2026-03-04T06:13:41.643Z",
+      "updatedAt": "2026-03-04T06:13:41.643Z"
+    },
+    "web-component-design": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/wshobson/agents.git",
+      "skillPath": "plugins/ui-design/skills/web-component-design/SKILL.md",
+      "skillFolderHash": "b06348e715467984870fccd2f1257d59f11f597a",
+      "installedAt": "2026-03-04T06:14:03.319Z",
+      "updatedAt": "2026-03-04T06:14:03.319Z"
+    },
+    "brainstorming": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/obra/superpowers.git",
+      "skillPath": "skills/brainstorming/SKILL.md",
+      "skillFolderHash": "d28aa4ed67fe5a3f1336f0fcccb1e548c67dc864",
+      "installedAt": "2026-03-04T06:14:30.329Z",
+      "updatedAt": "2026-03-04T06:14:30.329Z"
+    },
+    "codebase-analysis": {
+      "source": "solatis/claude-config",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/solatis/claude-config.git",
+      "skillPath": "skills/codebase-analysis/SKILL.md",
+      "skillFolderHash": "d919c614e66e018dacc9b9eb71abd6c791e560c4",
+      "installedAt": "2026-03-04T06:14:53.141Z",
+      "updatedAt": "2026-03-04T06:14:53.141Z"
+    },
+    "enhance-prompt": {
+      "source": "google-labs-code/stitch-skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/google-labs-code/stitch-skills.git",
+      "skillPath": "skills/enhance-prompt/SKILL.md",
+      "skillFolderHash": "ee608061b9209907f5f296670483884c5eb20827",
+      "installedAt": "2026-03-04T06:15:15.910Z",
+      "updatedAt": "2026-03-04T06:16:36.160Z"
+    },
+    "interface-design": {
+      "source": "dammyjay93/interface-design",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/dammyjay93/interface-design.git",
+      "skillPath": ".claude/skills/interface-design/SKILL.md",
+      "skillFolderHash": "3c1c18ac9f9732a8be68cb8504bf234fdafcf5c8",
+      "installedAt": "2026-03-04T06:15:35.235Z",
+      "updatedAt": "2026-03-04T06:15:35.235Z"
+    },
+    "discovery-interview": {
+      "source": "parcadei/continuous-claude-v3",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/parcadei/continuous-claude-v3.git",
+      "skillPath": ".claude/skills/discovery-interview/SKILL.md",
+      "skillFolderHash": "f048685171885c1d8c4ffdde63f12f55618ac05a",
+      "installedAt": "2026-03-04T06:15:53.971Z",
+      "updatedAt": "2026-03-04T06:15:53.971Z"
+    },
+    "design-md": {
+      "source": "google-labs-code/stitch-skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/google-labs-code/stitch-skills.git",
+      "skillPath": "skills/design-md/SKILL.md",
+      "skillFolderHash": "0a84781f35accede7cf373a4129d93bfb7651930",
+      "installedAt": "2026-03-04T06:16:36.153Z",
+      "updatedAt": "2026-03-04T06:16:36.153Z"
+    },
+    "react:components": {
+      "source": "google-labs-code/stitch-skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/google-labs-code/stitch-skills.git",
+      "skillPath": "skills/react-components/SKILL.md",
+      "skillFolderHash": "6bc31b18750870f79ea6152851175c9bd303e26b",
+      "installedAt": "2026-03-04T06:16:36.165Z",
+      "updatedAt": "2026-03-04T06:16:36.165Z"
+    },
+    "remotion": {
+      "source": "google-labs-code/stitch-skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/google-labs-code/stitch-skills.git",
+      "skillPath": "skills/remotion/SKILL.md",
+      "skillFolderHash": "ff9c6b50c98e38fa3d46560391b16894731d3bc3",
+      "installedAt": "2026-03-04T06:16:36.171Z",
+      "updatedAt": "2026-03-04T06:16:36.171Z"
+    },
+    "shadcn-ui": {
+      "source": "google-labs-code/stitch-skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/google-labs-code/stitch-skills.git",
+      "skillPath": "skills/shadcn-ui/SKILL.md",
+      "skillFolderHash": "def8b780a6f3857ca964d1a02c144ef6f86fb21c",
+      "installedAt": "2026-03-04T06:16:36.176Z",
+      "updatedAt": "2026-03-04T06:16:36.176Z"
+    },
+    "stitch-loop": {
+      "source": "google-labs-code/stitch-skills",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/google-labs-code/stitch-skills.git",
+      "skillPath": "skills/stitch-loop/SKILL.md",
+      "skillFolderHash": "560ccf6d41fcb8189c609b78f7b5e20c4be9f051",
+      "installedAt": "2026-03-04T06:16:36.181Z",
+      "updatedAt": "2026-03-04T06:16:36.181Z"
+    },
+    "mermaid-diagrams": {
+      "source": "softaworks/agent-toolkit",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/softaworks/agent-toolkit.git",
+      "skillPath": "skills/mermaid-diagrams/SKILL.md",
+      "skillFolderHash": "1b7a962715838d762fe4b34701d797d1d57496cd",
+      "installedAt": "2026-03-04T21:19:56.658Z",
+      "updatedAt": "2026-03-06T12:13:35.860Z"
+    },
+    "create-specification": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/github/awesome-copilot.git",
+      "skillPath": "skills/create-specification/SKILL.md",
+      "skillFolderHash": "f239cdf1d57a710ec5cde8bfa812aece38b91749",
+      "installedAt": "2026-03-04T21:34:07.252Z",
+      "updatedAt": "2026-03-05T04:22:00.124Z"
+    },
+    "documentation-writer": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/github/awesome-copilot.git",
+      "skillPath": "skills/documentation-writer/SKILL.md",
+      "skillFolderHash": "016d8040a3f91c8360b1003e74fbf29f34c283f5",
+      "installedAt": "2026-04-09T00:34:37.297Z",
+      "updatedAt": "2026-04-09T00:34:37.297Z"
+    }
+  },
+  "dismissed": {
+    "findSkillsPrompt": true
+  },
+  "lastSelectedAgents": [
+    "amp",
+    "antigravity",
+    "cline",
+    "codex",
+    "cursor",
+    "deepagents",
+    "firebender",
+    "gemini-cli",
+    "github-copilot",
+    "kimi-cli",
+    "opencode",
+    "warp",
+    "claude-code"
+  ]
+}

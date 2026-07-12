@@ -18,3 +18,8 @@
 
 # Home-targeted package — handled separately in setup.sh
 --ignore=^claude$
+
+# Package-local apply/validate/fix scripts — invoked by setup.sh, not stowed
+--ignore=^(apply|validate|fix)\.sh$
+--ignore=^\.skill-lock\.json$
+--ignore=^plugins\.lock\.json$

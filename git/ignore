@@ -82,3 +82,6 @@ target/
 CLAUDE.md.backup
 .azprofile
 .envrc
+.ghprofile
+.awsprofile
+.gcpprofile
