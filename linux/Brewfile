@@ -189,3 +189,4 @@ brew "go"                        # provides go itself
 brew "aws-vault"
 brew "azrl"
 brew "herdr"
+brew "bubblewrap"
