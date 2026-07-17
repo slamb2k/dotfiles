@@ -8,8 +8,9 @@ split_vertical = "prefix+\\"
 
 [ui]
 show_agent_labels_on_pane_borders = true
-# Attention queue: blocked/needs-attention agents sort to the top of the panel.
-agent_panel_sort = "priority"
+# Stable grouping — "priority" reshuffles rows the moment a clicked agent
+# changes state (done→seen drops it), which yanks the queue out from under you.
+agent_panel_sort = "spaces"
 
 [theme]
 name = "tokyo-night"
@@ -19,6 +20,9 @@ auto_switch = false
 # Bright attention colour — "needs attention"/blocked agents in the sidebar
 # render with the `red` token (foreground only; herdr has no per-state bg).
 red = "#ff2e63"
+# Brighter selection bar: selected row + active row backgrounds.
+surface0 = "#3d2f5e"
+surface_dim = "#2a2140"
 
 [experimental]
 pane_history = false
