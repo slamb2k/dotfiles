@@ -8,9 +8,9 @@ split_vertical = "prefix+\\"
 
 [ui]
 show_agent_labels_on_pane_borders = true
-# Stable grouping — "priority" reshuffles rows the moment a clicked agent
-# changes state (done→seen drops it), which yanks the queue out from under you.
-agent_panel_sort = "spaces"
+# Attention queue: blocked/needs-attention agents sort to the top. Known
+# tradeoff: clicking a done agent marks it seen and reshuffles it down.
+agent_panel_sort = "priority"
 
 [theme]
 name = "tokyo-night"
