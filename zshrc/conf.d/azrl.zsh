@@ -3,8 +3,11 @@
 # the `env` subcommand's exports in place (rbenv/direnv pattern). Everything
 # else passes straight through to the real binary.
 azrl() {
-  if [[ "$1" == "env" ]]; then
-    eval "$(command azrl env "${@:2}")"
+  # Only eval real env invocations: help/errors print prose, not shell code.
+  if [[ "$1" == "env" && "$2" != "--help" && "$2" != "-h" ]]; then
+    local _out
+    _out="$(command azrl env "${@:2}")" || return $?
+    [[ -n "$_out" ]] && eval "$_out"
   else
     command azrl "$@"
   fi
