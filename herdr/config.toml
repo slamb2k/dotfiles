@@ -8,10 +8,17 @@ split_vertical = "prefix+\\"
 
 [ui]
 show_agent_labels_on_pane_borders = true
+# Attention queue: blocked/needs-attention agents sort to the top of the panel.
+agent_panel_sort = "priority"
 
 [theme]
 name = "tokyo-night"
 auto_switch = false
+
+[theme.custom]
+# Bright attention colour — "needs attention"/blocked agents in the sidebar
+# render with the `red` token (foreground only; herdr has no per-state bg).
+red = "#ff2e63"
 
 [experimental]
 pane_history = false
