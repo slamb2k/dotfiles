@@ -1,0 +1,279 @@
+#!/usr/bin/env python3
+"""Search Claude Code conversation history (~/.claude/projects/**/*.jsonl).
+
+Usage:
+  claude-hist "query terms"            search (AND, ranked)
+  claude-hist "query" -p azrl --since 2026-06 --role user
+  claude-hist show <session-id>        print one session's conversation
+  claude-hist reindex                  full rebuild of the index
+"""
+import argparse
+import json
+import re
+import sqlite3
+import sys
+from pathlib import Path
+
+DB = Path.home() / ".claude" / "history.db"
+PROJECTS = Path.home() / ".claude" / "projects"
+HOME_SLUG = str(Path.home()).replace("/", "-")  # e.g. -home-slamb2k
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS files(path TEXT PRIMARY KEY, mtime REAL, size INTEGER);
+CREATE TABLE IF NOT EXISTS sessions(
+  id TEXT PRIMARY KEY, project TEXT, title TEXT,
+  first_ts TEXT, last_ts TEXT, path TEXT);
+CREATE TABLE IF NOT EXISTS messages(
+  id INTEGER PRIMARY KEY, session TEXT, role TEXT, ts TEXT, text TEXT);
+CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session);
+CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts
+  USING fts5(text, content='messages', content_rowid='id');
+CREATE TRIGGER IF NOT EXISTS messages_ai AFTER INSERT ON messages BEGIN
+  INSERT INTO messages_fts(rowid, text) VALUES (new.id, new.text);
+END;
+CREATE TRIGGER IF NOT EXISTS messages_ad AFTER DELETE ON messages BEGIN
+  INSERT INTO messages_fts(messages_fts, rowid, text) VALUES('delete', old.id, old.text);
+END;
+"""
+
+SYS_REMINDER = re.compile(r"<system-reminder>.*?</system-reminder>", re.S)
+LOCAL_CMD_OUT = re.compile(r"<local-command-std(out|err)>.*?</local-command-std\1>", re.S)
+CMD_TAGS = re.compile(r"</?(command-(name|message|args)|local-command-caveat)>")
+
+
+def clean(text):
+    text = SYS_REMINDER.sub("", text)
+    text = LOCAL_CMD_OUT.sub("", text)
+    text = CMD_TAGS.sub(" ", text)
+    text = text.strip()
+    if text.startswith("Caveat:"):
+        return ""
+    return text
+
+
+def parse_file(path):
+    """Return (title, first_ts, last_ts, [(role, ts, text), ...])."""
+    title = summary = first = last = None
+    msgs = []
+    with open(path, errors="replace") as fh:
+        for line in fh:
+            if '"isSidechain":true' in line[:120]:
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            t = obj.get("type")
+            if t == "ai-title":
+                title = obj.get("aiTitle") or title
+            elif t == "summary":
+                summary = obj.get("summary") or summary
+            elif t in ("user", "assistant"):
+                if obj.get("isMeta"):
+                    continue
+                content = (obj.get("message") or {}).get("content")
+                if isinstance(content, str):
+                    texts = [content]
+                elif isinstance(content, list):
+                    texts = [b.get("text", "") for b in content
+                             if isinstance(b, dict) and b.get("type") == "text"]
+                else:
+                    continue
+                text = clean("\n".join(texts))
+                if not text:
+                    continue
+                ts = obj.get("timestamp", "")
+                first = first or ts
+                last = ts
+                msgs.append((t, ts, text))
+    if not title:
+        title = summary
+    if not title:
+        for role, _, text in msgs:
+            if role == "user":
+                title = text.splitlines()[0][:80]
+                break
+    return title or "(untitled)", first or "", last or "", msgs
+
+
+def display_project(dirname):
+    return dirname.removeprefix(HOME_SLUG).lstrip("-") or dirname
+
+
+def connect():
+    con = sqlite3.connect(DB)
+    con.executescript("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;")
+    con.executescript(SCHEMA)
+    return con
+
+
+def update_index(con, full=False):
+    if full:
+        con.executescript(
+            "DELETE FROM messages; DELETE FROM sessions; DELETE FROM files;")
+    known = {p: (m, s) for p, m, s in
+             con.execute("SELECT path, mtime, size FROM files")}
+    on_disk = set()
+    changed = []
+    for path in PROJECTS.glob("*/*.jsonl"):
+        st = path.stat()
+        key = str(path)
+        on_disk.add(key)
+        if known.get(key) != (st.st_mtime, st.st_size):
+            changed.append((path, st))
+    gone = set(known) - on_disk
+    for key in gone:
+        sid = Path(key).stem
+        con.execute("DELETE FROM messages WHERE session=?", (sid,))
+        con.execute("DELETE FROM sessions WHERE id=?", (sid,))
+        con.execute("DELETE FROM files WHERE path=?", (key,))
+    for i, (path, st) in enumerate(changed):
+        sid = path.stem
+        title, first, last, msgs = parse_file(path)
+        con.execute("DELETE FROM messages WHERE session=?", (sid,))
+        con.execute("REPLACE INTO sessions VALUES(?,?,?,?,?,?)",
+                    (sid, path.parent.name, title, first, last, str(path)))
+        con.executemany(
+            "INSERT INTO messages(session, role, ts, text) VALUES(?,?,?,?)",
+            ((sid, role, ts, text) for role, ts, text in msgs))
+        con.execute("REPLACE INTO files VALUES(?,?,?)",
+                    (str(path), st.st_mtime, st.st_size))
+        if i % 50 == 49:
+            con.commit()
+            print(f"\rindexing… {i + 1}/{len(changed)}", end="", file=sys.stderr)
+    con.commit()
+    if changed:
+        print(f"\rindexed {len(changed)} session file(s)."
+              + " " * 20, file=sys.stderr)
+
+
+COLOR = sys.stdout.isatty()
+
+
+def c(code, s):
+    return f"\x1b[{code}m{s}\x1b[0m" if COLOR else s
+
+
+def fts_query(args):
+    if args.raw:
+        return args.query
+    toks = args.query.split()
+    return " ".join('"' + t.replace('"', '""') + '"' for t in toks)
+
+
+def cmd_search(con, args):
+    hl_a, hl_b = ("\x1b[1;33m", "\x1b[0m") if COLOR else ("«", "»")
+    sql = ["""SELECT m.session, m.role, m.ts,
+                     snippet(messages_fts, 0, ?, ?, '…', 18), bm25(messages_fts)
+              FROM messages_fts JOIN messages m ON m.id = messages_fts.rowid
+              JOIN sessions s ON s.id = m.session
+              WHERE messages_fts MATCH ?"""]
+    params = [hl_a, hl_b, fts_query(args)]
+    if args.project:
+        sql.append("AND s.project LIKE ?")
+        params.append(f"%{args.project}%")
+    if args.role:
+        sql.append("AND m.role = ?")
+        params.append(args.role)
+    if args.since:
+        sql.append("AND m.ts >= ?")
+        params.append(args.since)
+    if args.until:
+        sql.append("AND m.ts <= ?")
+        params.append(args.until + "~")
+    sql.append("ORDER BY bm25(messages_fts) LIMIT 400")
+    try:
+        rows = con.execute(" ".join(sql), params).fetchall()
+    except sqlite3.OperationalError as e:
+        sys.exit(f"claude-hist: bad query ({e})")
+    # group by session, keep session order = best hit first
+    by_session, order = {}, []
+    for sid, role, ts, snip, rank in rows:
+        if sid not in by_session:
+            by_session[sid] = []
+            order.append(sid)
+        by_session[sid].append((role, ts, snip))
+    meta = {sid: row for sid in order
+            for row in con.execute(
+                "SELECT project, title, last_ts FROM sessions WHERE id=?", (sid,))}
+    shown = 0
+    for sid in order:
+        if sid not in meta:
+            continue
+        project, title, last_ts = meta[sid]
+        proj = display_project(project)
+        if shown:
+            print()
+        print(c("1", title))
+        print(c("2", f"{proj} · {last_ts[:10]} · {sid}"))
+        for role, ts, snip in by_session[sid][:args.snippets]:
+            snip = " ".join(snip.split())
+            print(f"  {c('2', f'{role[:4]:<4} {ts[:10]}')}  {snip}")
+        shown += 1
+        if shown >= args.limit:
+            break
+    if not shown:
+        print("no matches.")
+
+
+def cmd_show(con, args):
+    hits = list(PROJECTS.glob(f"*/{args.id}*.jsonl"))
+    if not hits:
+        sys.exit(f"claude-hist: no session matching {args.id!r}")
+    if len(hits) > 1:
+        sys.exit("claude-hist: ambiguous id:\n  "
+                 + "\n  ".join(p.stem for p in hits))
+    path = hits[0]
+    title, first, last, msgs = parse_file(path)
+    print(c("1", title))
+    print(c("2", f"{display_project(path.parent.name)} · {first[:10]} → {last[:10]}"
+                 f" · {len(msgs)} messages · {path}"))
+    for role, ts, text in msgs:
+        label = "you" if role == "user" else "claude"
+        print(f"\n{c('1;36' if role == 'user' else '1;35', f'── {label}')} "
+              f"{c('2', ts[11:19])}")
+        print(text)
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="claude-hist", description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="cmd")
+    s = sub.add_parser("search", help="search history (default)")
+    s.add_argument("query")
+    s.add_argument("-p", "--project", help="filter: project name contains")
+    s.add_argument("--role", choices=["user", "assistant"])
+    s.add_argument("--since", help="ISO date prefix, e.g. 2026-06")
+    s.add_argument("--until")
+    s.add_argument("-n", "--limit", type=int, default=8, help="max sessions")
+    s.add_argument("-m", "--snippets", type=int, default=3, help="snippets per session")
+    s.add_argument("--raw", action="store_true", help="pass query straight to FTS5")
+    s.add_argument("--no-update", action="store_true", help="skip index refresh")
+    sh = sub.add_parser("show", help="print one session")
+    sh.add_argument("id", help="session id (prefix ok)")
+    sub.add_parser("reindex", help="rebuild the index from scratch")
+
+    argv = sys.argv[1:]
+    if argv and argv[0] not in ("search", "show", "reindex", "-h", "--help"):
+        argv.insert(0, "search")
+    args = ap.parse_args(argv)
+
+    if not args.cmd:
+        ap.print_help()
+        return
+    con = connect()
+    try:
+        if args.cmd == "reindex":
+            update_index(con, full=True)
+        elif args.cmd == "show":
+            cmd_show(con, args)
+        else:
+            if not args.no_update:
+                update_index(con)
+            cmd_search(con, args)
+    finally:
+        con.close()
+
+
+if __name__ == "__main__":
+    main()
