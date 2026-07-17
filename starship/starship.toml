@@ -2,7 +2,7 @@ add_newline = true
 
 # Two-line prompt: directory on the top left, current modules on the top right,
 # and the input marker on the bottom. $fill draws the dotted leader.
-format = """[╭](surface2) $directory$fill $all$line_break[╰](surface2)$character"""
+format = """[╭](surface2) $directory$fill ${env_var.AZRL_CHIP}$all$line_break[╰](surface2)$character"""
 right_format = ""
 
 palette = "catppuccin_mocha"
@@ -97,3 +97,10 @@ crust = "#11111b"
 
 [cmd_duration]
 format = '[$duration]($style) '
+
+# azrl shell/env override — the ⌁ chip appears only while this terminal is
+# acting as a profile. AZRL_CHIP is the short display form derived from
+# AZRL_PROFILE by the precmd hook in dotfiles/zshrc/conf.d/azrl.zsh.
+[env_var.AZRL_CHIP]
+format = '[⌁ $env_value]($style) '
+style = 'bold bright-blue'
