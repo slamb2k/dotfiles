@@ -12,9 +12,18 @@
 # reads as a textured material rather than a plain block. Built on tokyo-night
 # so the module CONTENT formats (git icon, padding, context bar, model name) are
 # inherited; only the layout and colours are overridden.
+#
+# $cost is intentionally NOT in this format. claude-statusline (v0.9.0) has no
+# module that can source arbitrary external data (e.g. a project's LOGBOOK.md
+# follow-ups count), so that's done by a wrapper script instead of this config
+# — see statusline-logbook-wrapper.sh in this same package, wired up via
+# ~/.claude/settings.json's statusLine.command. The wrapper calls this binary
+# for the base render, then appends a themed segment reusing the amber shade
+# freed up here. If claude-statusline ever ships a custom_command module
+# (on their roadmap), replace the wrapper with a native [logbook] module.
 preset = "tokyo-night"
 
-format = "$directory[](fg:#1e3a8a bg:#134e4a)$git_branch[](fg:#134e4a bg:#312e81)$model[](fg:#312e81 bg:#78350f)$cost[](fg:#78350f bg:#1e293b)$context[](fg:#1e293b)"
+format = "$directory[](fg:#1e3a8a bg:#134e4a)$git_branch[](fg:#134e4a bg:#312e81)$model[](fg:#312e81 bg:#9a3412)$context[](fg:#9a3412)"
 
 [directory]
 style = "fg:#ffffff bg:#1e3a8a bold"
@@ -23,16 +32,11 @@ style = "fg:#ffffff bg:#1e3a8a bold"
 style = "fg:#ffffff bg:#134e4a"
 
 [model]
+format = " ⬡ {{.DisplayName}} "
 style = "fg:#ffffff bg:#312e81 bold"
 
-[cost]
-# Clear tokyo-night's inherited cost thresholds so the solid amber background
-# always fills the segment (matching the cap) regardless of the dollar value.
-thresholds = []
-style = "fg:#ffffff bg:#78350f"
-
 [context]
-style = "fg:#ffffff bg:#1e293b"
+style = "fg:#ffffff bg:#9a3412"
 bar_width = 10
 bar_fill = "▨"
 bar_empty = "▢"
