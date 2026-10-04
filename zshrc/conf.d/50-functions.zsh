@@ -125,14 +125,6 @@ code() {
   ssh "$WORKSTATION" "code --remote ssh-remote+${REMOTE_ALIAS} \"${abs}\""
 }
 
-# tmux: swallow stray paste bytes that arrive after a command finishes.
-zle-line-init() {
-  if [[ -n "$TMUX" ]]; then
-    while read -t 0.05 -k 1 2>/dev/null; do :; done
-  fi
-}
-zle -N zle-line-init
-
 # azlogin/azlogin-debug retired 2026-07-08 — superseded by azrl (browser
 # bridge, profile bookkeeping, git credential integration). Sign in with
 # `azrl login <profile>` on the VM; it bridges the browser automatically.
