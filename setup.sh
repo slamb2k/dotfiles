@@ -1082,7 +1082,7 @@ APT_PKGS=(
   bats fonts-noto-color-emoji fonts-liberation fonts-freefont-ttf
   fonts-ipafont-gothic fonts-tlwg-loma-otf fonts-unifont fonts-wqy-zenhei
   xfonts-cyrillic xfonts-scalable xvfb
-  libffi-dev python3-dev openjdk-17-jdk
+  libffi-dev python3-dev pipx openjdk-17-jdk
   libasound2t64 libatk1.0-0t64 libatk-bridge2.0-0t64 libatspi2.0-0t64
   libcairo2 libcairo-gobject2 libcups2t64 libdbus-1-3 libdrm2 libenchant-2-2
   libepoxy0 libevent-2.1-7t64 libflite1 libfontconfig1 libfreetype6 libgbm1
@@ -1109,6 +1109,19 @@ if [[ -n $DRY_RUN ]]; then
   fi
 else
   sudo apt update && sudo apt install -y "${APT_PKGS[@]}"
+fi
+
+# -----------------------------------------------------------------------------
+# Keeper Commander CLI
+# -----------------------------------------------------------------------------
+section 'Keeper Commander'
+if command -v keeper &>/dev/null; then
+  note "keeper already installed at $(command -v keeper)"
+elif [[ -n $DRY_RUN ]]; then
+  would 'pipx install keepercommander'
+else
+  python3 -m pipx ensurepath >/dev/null 2>&1 || true
+  pipx install keepercommander
 fi
 
 # -----------------------------------------------------------------------------

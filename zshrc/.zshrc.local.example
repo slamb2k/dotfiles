@@ -18,7 +18,7 @@
 #   - PATH additions for common tools (use 00-env.zsh with guards)
 #   - Aliases that differ by machine (use 40-aliases.zsh with guards)
 #   - Tmux auto-attach (use 60-tmux.zsh with __is_vm guard)
-#   - Secrets that fit ~/.config/secrets/*.zsh (sourced by 99-secrets.zsh)
+#   - Secrets that belong in Keeper (add to _KEEPER_SECRETS in 99-secrets.zsh)
 
 # ---- Inline secrets (simple, but plaintext on disk) -------------------------
 # export WORK_TENANT_ID="1234-5678-..."

@@ -7,6 +7,7 @@ export EDITOR=nvim
 
 # XDG dirs (be explicit so other tools agree)
 export XDG_CONFIG_HOME="$HOME/.config"
+export KSM_INI_DIR="$HOME/.config/ksm"
 
 # ---- PATH (rightmost = highest priority via path=( … $path )) --------------
 # Homebrew (Linux WSL or macOS — whichever is present)

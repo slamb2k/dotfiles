@@ -4,6 +4,7 @@ tmux/*.bak-*
 raycast
 fzf
 history.txt
+.keeper/
 
 # zsh — completion cache and per-machine overrides
 zshrc/.zcompdump
