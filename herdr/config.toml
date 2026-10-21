@@ -6,6 +6,19 @@ delivery = "herdr"
 prefix = "ctrl+a"
 split_vertical = "prefix+\\"
 
+# pane-resurrect: where tmux-resurrect puts them, and herdr leaves both free.
+[[keys.command]]
+key = "prefix+ctrl+s"
+type = "plugin_action"
+command = "unstable-code.herdr-pane-resurrect.save"
+description = "save pane commands"
+
+[[keys.command]]
+key = "prefix+ctrl+r"
+type = "plugin_action"
+command = "unstable-code.herdr-pane-resurrect.restore"
+description = "restore pane commands"
+
 [ui]
 show_agent_labels_on_pane_borders = true
 # Attention queue: blocked/needs-attention agents sort to the top. Known
@@ -17,6 +30,9 @@ name = "tokyo-night"
 auto_switch = false
 
 [theme.custom]
+# Let the host terminal (and desktop) show through herdr's chrome.
+panel_bg = "transparent"
+sidebar_bg = "transparent"
 # Bright attention colour — "needs attention"/blocked agents in the sidebar
 # render with the `red` token (foreground only; herdr has no per-state bg).
 red = "#ff2e63"
@@ -25,4 +41,5 @@ surface0 = "#3d2f5e"
 surface_dim = "#2a2140"
 
 [experimental]
+kitty_graphics = true
 pane_history = false

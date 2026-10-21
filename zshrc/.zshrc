@@ -16,6 +16,5 @@ unset _f
 # Per-machine overrides — gitignored, optional.
 [[ -r "$ZDOTDIR/.zshrc.local" ]] && source "$ZDOTDIR/.zshrc.local"
 
-. "$HOME/.atuin/bin/env"
-
+# Atuin is installed via linuxbrew — brew manages PATH, so no env file needed.
 eval "$(atuin init zsh)"
