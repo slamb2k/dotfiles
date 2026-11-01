@@ -14,6 +14,16 @@ fcd() { cd "$(find . -type d -not -path '*/.*' | fzf)" && l; }
 f()   { find . -type f -not -path '*/.*' | fzf | _clipcopy; }
 fv()  { nvim "$(find . -type f -not -path '*/.*' | fzf)"; }
 
+# Open Microsoft Edge on Windows by profile display name from WSL.
+edge() {
+  local edge="/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
+  local state="/mnt/c/Users/$(cmd.exe /c 'echo %USERNAME%' 2>/dev/null | tr -d '\r')/AppData/Local/Microsoft/Edge/User Data/Local State"
+  local dir
+  dir=$(jq -r --arg n "$1" '.profile.info_cache | to_entries[] | select(.value.name==$n) | .key' "$state")
+  [[ -z $dir ]] && { echo "no profile '$1'" >&2; return 1; }
+  "$edge" --profile-directory="$dir" "${2:-about:blank}" &>/dev/null &
+}
+
 # Ranger that cd's to its exit dir
 ranger() {
   local IFS=$'\t\n'
@@ -44,6 +54,14 @@ unset -f __dotfiles_drift_check
 # Claude Code helpers
 unalias ccq 2>/dev/null
 ccq() { ~/.claude/scripts/ccq.sh "$@"; }
+
+claude-herdr() {
+  if [[ -n "$HERDR_PANE_ID" ]] && command -v herdmates >/dev/null 2>&1; then
+    herdmates teammux-launch "$@"
+  else
+    command claude "$@"
+  fi
+}
 
 claude-update-plugins() {
   emulate -L zsh
@@ -130,3 +148,14 @@ code() {
 # `azrl login <profile>` on the VM; it bridges the browser automatically.
 azlogin() { print "azlogin retired — run \`azrl login <profile>\` instead (azrl bridges the browser)" >&2; return 1 }
 azlogin-debug() { azlogin }
+
+# Restart the shell in place to pick up config changes. Refuses while jobs exist:
+# exec would leave them running or suspended with no shell able to fg them.
+reload() {
+  if (( ${#jobstates} )); then
+    jobs
+    echo "reload: fg/kill/disown these jobs first, or open a new pane." >&2
+    return 1
+  fi
+  exec zsh
+}

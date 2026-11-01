@@ -18,3 +18,6 @@ unset _f
 
 # Atuin is installed via linuxbrew — brew manages PATH, so no env file needed.
 eval "$(atuin init zsh)"
+
+# bun completions
+[ -s "/home/slamb2k/.bun/_bun" ] && source "/home/slamb2k/.bun/_bun"
