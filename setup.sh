@@ -1035,12 +1035,21 @@ fi
 # 4. zsh ZDOTDIR bootstrap
 # -----------------------------------------------------------------------------
 section 'zsh ZDOTDIR pointer'
+# env/path.zsh gives every zsh, including non-interactive ones that never read .zshrc, the same PATH
+ZSHENV_PATH_LINE='[[ -r "$ZDOTDIR/env/path.zsh" ]] && . "$ZDOTDIR/env/path.zsh"'
 if [[ -f ~/.zshenv ]]; then
   note '~/.zshenv already exists'
+  if ! grep -qF 'env/path.zsh' ~/.zshenv; then
+    if [[ -n $DRY_RUN ]]; then
+      would 'append the env/path.zsh line to ~/.zshenv'
+    else
+      printf '%s\n' "$ZSHENV_PATH_LINE" >> ~/.zshenv
+    fi
+  fi
 elif [[ -n $DRY_RUN ]]; then
-  would 'write ~/.zshenv with ZDOTDIR=$HOME/.config/zshrc'
+  would 'write ~/.zshenv with ZDOTDIR=$HOME/.config/zshrc and the env/path.zsh line'
 else
-  echo 'export ZDOTDIR="$HOME/.config/zshrc"' > ~/.zshenv
+  printf '%s\n' 'export ZDOTDIR="$HOME/.config/zshrc"' "$ZSHENV_PATH_LINE" > ~/.zshenv
 fi
 
 # -----------------------------------------------------------------------------

@@ -9,38 +9,9 @@ export EDITOR=nvim
 export XDG_CONFIG_HOME="$HOME/.config"
 export KSM_INI_DIR="$HOME/.config/ksm"
 
-# ---- PATH (rightmost = highest priority via path=( … $path )) --------------
-# Homebrew (Linux WSL or macOS — whichever is present)
-if [[ -x /home/linuxbrew/.linuxbrew/bin/brew ]]; then
-  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-elif [[ -x /opt/homebrew/bin/brew ]]; then
-  eval "$(/opt/homebrew/bin/brew shellenv)"
-fi
-
-# Language/runtime/tool directories
-[[ -d "$HOME/.cargo/bin" ]]               && path=("$HOME/.cargo/bin" $path)
-[[ -d "$HOME/.local/share/mise/shims" ]]  && path=("$HOME/.local/share/mise/shims" $path)
-[[ -d "$HOME/.local/bin" ]]               && path=("$HOME/.local/bin" $path)
-[[ -d "$HOME/.bun/bin" ]]                 && path=("$HOME/.bun/bin" $path) && export BUN_INSTALL="$HOME/.bun"
-[[ -d "$HOME/bin" ]]                      && path=("$HOME/bin" $path)
-
-# .NET / Power Platform CLI
-export DOTNET_ROOT="$HOME/.dotnet"
-[[ -d $DOTNET_ROOT ]]                      && path=("$DOTNET_ROOT" $path)
-[[ -d "$HOME/.local/pac/tools" ]]         && path=("$HOME/.local/pac/tools" $path)
-
-# opencode
-[[ -d "$HOME/.opencode/bin" ]]            && path=("$HOME/.opencode/bin" $path)
-
-# Go (provided by Homebrew; do not force GOROOT to old /usr/local/go)
-export GOPATH="$HOME/go"
-[[ -d "$GOPATH/bin" ]]                    && path=($path "$GOPATH/bin")
-
-# pnpm
-export PNPM_HOME="$HOME/.local/share/pnpm"
-[[ -d $PNPM_HOME ]]                       && path=("$PNPM_HOME" $path)
-
-typeset -U path PATH
+# ---- PATH: shared with non-interactive shells via ~/.zshenv -----------------
+# Sourced again here so it still wins over anything system login files add.
+source "${ZDOTDIR:-$HOME/.config/zshrc}/env/path.zsh"
 
 # Tool-specific exports
 export KUBECONFIG="$HOME/.kube/config"

@@ -43,6 +43,8 @@ STOP — this machine uses a modular ZDOTDIR setup. ~/.zshrc and ~/.bashrc are N
 read by zsh; editing/creating them has no effect.
 
   • ~/.zshenv sets ZDOTDIR="$HOME/.config/zshrc"  (symlink -> ~/dotfiles/zshrc)
+    and sources ~/dotfiles/zshrc/env/path.zsh, the PATH for every zsh
+    (interactive or not). New tool directories go there, not in 00-env.
   • Loader ~/dotfiles/zshrc/.zshrc sources ~/dotfiles/zshrc/conf.d/*.zsh in
     lexical order:  00-env  10-completions  20-keybindings  30-prompt
                     40-aliases  50-functions
