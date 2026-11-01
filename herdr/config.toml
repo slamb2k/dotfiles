@@ -3,7 +3,9 @@ onboarding = false
 delivery = "herdr"
 
 [keys]
-prefix = "ctrl+a"
+# CapsLock, remapped to F13 by WezTerm: herdr's prefix is a single key and
+# rejects "capslock", but accepts F13.
+prefix = "f13"
 split_vertical = "prefix+\\"
 
 # pane-resurrect: where tmux-resurrect puts them, and herdr leaves both free.
