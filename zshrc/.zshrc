@@ -13,6 +13,13 @@ for _f in "$ZDOTDIR"/conf.d/*.zsh(N); do
 done
 unset _f
 
+# >>> cetec-astronomy >>>
+# Keeper-backed env vars (github.com/slamb2k/cetec-astronomy; its install.sh puts the script here).
+# The list stays in this repo so every machine shares it.
+KEEPER_SECRETS_LIST="$ZDOTDIR/keeper-secrets.list"
+[[ -r "$HOME/.local/share/cetec-astronomy/cetec-astronomy.zsh" ]] && source "$HOME/.local/share/cetec-astronomy/cetec-astronomy.zsh"
+# <<< cetec-astronomy <<<
+
 # Per-machine overrides — gitignored, optional.
 [[ -r "$ZDOTDIR/.zshrc.local" ]] && source "$ZDOTDIR/.zshrc.local"
 
