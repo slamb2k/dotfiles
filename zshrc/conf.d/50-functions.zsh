@@ -167,3 +167,97 @@ reload() {
   fi
   exec zsh
 }
+
+faag() {
+    local text="${*:-FERRY}"
+    local figlet_dir
+    local retro_dir
+    local figlet_js
+    local retrofont_bin
+    local font
+    local font_name
+
+    figlet_dir="$(npm root -g)/figlet/fonts"
+    retro_dir="$HOME/.local/share/retrofonts"
+
+    figlet_js="$(command -v figlet-js)" || {
+        echo "figlet-js not found" >&2
+        return 1
+    }
+
+    retrofont_bin="$(command -v retrofont)" || {
+        echo "retrofont not found" >&2
+        return 1
+    }
+
+    font="$(
+        FIGLET_DIR="$figlet_dir" \
+        RETRO_DIR="$retro_dir" \
+        FIGLET_JS="$figlet_js" \
+        RETROFONT="$retrofont_bin" \
+        FAAG_TEXT="$text" \
+        tv \
+            --source-command '
+                {
+                    find "$FIGLET_DIR" \
+                        -maxdepth 1 \
+                        -type f \
+                        -name "*.flf"
+
+                    find "$RETRO_DIR" \
+                        -type f \
+                        -name "*.tdf"
+                } 2>/dev/null |
+                sort
+            ' \
+            --preview-command '
+                font="{}"
+
+                case "$font" in
+                    *.flf)
+                        font_name="${font##*/}"
+                        font_name="${font_name%.flf}"
+
+                        "$FIGLET_JS" \
+                            -f "$font_name" \
+                            "$FAAG_TEXT"
+                        ;;
+
+                    *.tdf)
+                        "$RETROFONT" render \
+                            --font "$font" \
+                            --text "$FAAG_TEXT"
+                        ;;
+
+                    *)
+                        printf "Unsupported font: %s\n" "$font"
+                        ;;
+                esac
+            ' \
+            --preview-size 75
+    )" || return
+
+    [[ -z "$font" ]] && return
+
+    case "$font" in
+        *.flf)
+            font_name="${font##*/}"
+            font_name="${font_name%.flf}"
+
+            "$figlet_js" \
+                -f "$font_name" \
+                "$text"
+            ;;
+
+        *.tdf)
+            "$retrofont_bin" render \
+                --font "$font" \
+                --text "$text"
+            ;;
+
+        *)
+            echo "Unsupported font: $font" >&2
+            return 1
+            ;;
+    esac
+}
