@@ -133,6 +133,14 @@ ccl() {
   echo "  ($count active)"
 }
 
+# herdr update only replaces ~/.local/bin/herdr; shipyardd instance users run the
+# system copy, so mirror it to /usr/local/bin after a successful update.
+herdr-update() {
+  herdr update --handoff "$@" || return
+  sudo install -m 0755 ~/.local/bin/herdr /usr/local/bin/herdr || return
+  print "user:   $(~/.local/bin/herdr --version)\nsystem: $(/usr/local/bin/herdr --version)"
+}
+
 # Remote VS Code: open current Linux path from the workstation via SSH.
 code() {
   local target="${1:-.}" abs
