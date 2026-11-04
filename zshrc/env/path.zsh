@@ -23,6 +23,7 @@ fi
 # .NET / Power Platform CLI
 export DOTNET_ROOT="$HOME/.dotnet"
 [[ -d $DOTNET_ROOT ]]                      && path=("$DOTNET_ROOT" $path)
+[[ -d "$DOTNET_ROOT/tools" ]]              && path=("$DOTNET_ROOT/tools" $path)
 [[ -d "$HOME/.local/pac/tools" ]]         && path=("$HOME/.local/pac/tools" $path)
 
 # opencode
