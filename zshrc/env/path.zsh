@@ -39,6 +39,7 @@ export PNPM_HOME="$HOME/.local/share/pnpm"
 # nvm's default node without loading nvm.sh (~1s). "lts/*" means the newest LTS alias.
 # Interactive shells still load nvm.sh in conf.d/00-env.zsh for `nvm use`.
 () {
+  setopt localoptions bareglobqual
   local nvm="$HOME/.nvm" v f
   local -a vs dirs
   [[ -r "$nvm/alias/default" ]] || return
