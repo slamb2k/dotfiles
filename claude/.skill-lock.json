@@ -198,6 +198,15 @@
       "skillFolderHash": "016d8040a3f91c8360b1003e74fbf29f34c283f5",
       "installedAt": "2026-04-09T00:34:37.297Z",
       "updatedAt": "2026-04-09T00:34:37.297Z"
+    },
+    "adhd": {
+      "source": "UditAkhourii/adhd",
+      "sourceType": "github",
+      "sourceUrl": "https://github.com/UditAkhourii/adhd.git",
+      "skillPath": "skills/adhd/SKILL.md",
+      "skillFolderHash": "20295ca5b738965bcae4385db387faf2bfb8fc1e",
+      "installedAt": "2026-07-23T12:21:32.201Z",
+      "updatedAt": "2026-07-23T15:36:27.075Z"
     }
   },
   "dismissed": {
